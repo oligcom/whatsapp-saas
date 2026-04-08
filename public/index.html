@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gerador de Mensagens WhatsApp</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+      padding: 2rem;
+      width: 100%;
+      max-width: 520px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      margin-bottom: 1.75rem;
+    }
+
+    .logo svg { flex-shrink: 0; }
+
+    .logo-text {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #128c7e;
+      line-height: 1.2;
+      flex: 1;
+    }
+
+    .logo-text span {
+      display: block;
+      font-size: .75rem;
+      font-weight: 400;
+      color: #666;
+    }
+
+    .btn-logout {
+      display: flex;
+      align-items: center;
+      gap: .3rem;
+      padding: .35rem .7rem;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      background: #fff;
+      font-size: .78rem;
+      font-weight: 600;
+      color: #888;
+      cursor: pointer;
+      transition: all .15s;
+      flex-shrink: 0;
+    }
+
+    .btn-logout:hover { border-color: #e53e3e; color: #e53e3e; }
+
+    label {
+      display: block;
+      font-size: .8rem;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: .35rem;
+    }
+
+    .field { margin-bottom: 1.1rem; }
+
+    input, textarea, select {
+      width: 100%;
+      padding: .6rem .75rem;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      font-size: .95rem;
+      font-family: inherit;
+      color: #222;
+      transition: border-color .15s;
+      background: #fafafa;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: #25d366;
+      background: #fff;
+    }
+
+    textarea { resize: vertical; min-height: 80px; }
+
+    .tom-group {
+      display: flex;
+      gap: .5rem;
+    }
+
+    .tom-btn {
+      flex: 1;
+      padding: .5rem;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      background: #fafafa;
+      font-size: .85rem;
+      font-weight: 500;
+      color: #555;
+      cursor: pointer;
+      transition: all .15s;
+      text-align: center;
+    }
+
+    .tom-btn:hover { border-color: #25d366; color: #128c7e; }
+
+    .tom-btn.active {
+      border-color: #25d366;
+      background: #e9faf0;
+      color: #128c7e;
+      font-weight: 700;
+    }
+
+    .btn-gerar {
+      width: 100%;
+      padding: .75rem;
+      background: #25d366;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s, opacity .15s;
+      margin-top: .5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+    }
+
+    .btn-gerar:hover { background: #1da851; }
+    .btn-gerar:disabled { opacity: .6; cursor: not-allowed; }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2.5px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+
+    .btn-gerar.loading .spinner { display: block; }
+    .btn-gerar.loading .btn-label { display: none; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .result-box {
+      margin-top: 1.5rem;
+      display: none;
+    }
+
+    .result-box.visible { display: block; }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: .5rem;
+    }
+
+    .result-header p {
+      font-size: .8rem;
+      font-weight: 600;
+      color: #444;
+    }
+
+    .btn-copiar {
+      display: flex;
+      align-items: center;
+      gap: .35rem;
+      padding: .35rem .7rem;
+      border: 1.5px solid #ddd;
+      border-radius: 7px;
+      background: #fff;
+      font-size: .8rem;
+      font-weight: 600;
+      color: #555;
+      cursor: pointer;
+      transition: all .15s;
+    }
+
+    .btn-copiar:hover { border-color: #25d366; color: #128c7e; }
+
+    .btn-copiar.copiado {
+      border-color: #25d366;
+      background: #e9faf0;
+      color: #128c7e;
+    }
+
+    .mensagem-texto {
+      background: #f0f2f5;
+      border-radius: 10px;
+      padding: 1rem;
+      font-size: .95rem;
+      line-height: 1.6;
+      color: #222;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .error-msg {
+      margin-top: 1rem;
+      padding: .65rem .9rem;
+      background: #fff0f0;
+      border: 1.5px solid #fca5a5;
+      border-radius: 8px;
+      font-size: .875rem;
+      color: #b91c1c;
+      display: none;
+    }
+
+    .error-msg.visible { display: block; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="19" cy="19" r="19" fill="#25d366"/>
+        <path d="M27.5 10.5A11.5 11.5 0 0 0 7.9 24.1L6.5 31.5l7.6-1.4A11.5 11.5 0 1 0 27.5 10.5zm-8.5 17a9.4 9.4 0 0 1-4.8-1.3l-.35-.2-3.6.66.68-3.5-.23-.36a9.5 9.5 0 1 1 8.3 4.7zm5.2-7.1c-.28-.14-1.67-.82-1.93-.91-.26-.1-.45-.14-.64.14-.19.28-.73.91-.9 1.1-.16.19-.33.21-.61.07a7.7 7.7 0 0 1-2.27-1.4 8.5 8.5 0 0 1-1.57-1.95c-.16-.28 0-.43.13-.57.13-.12.28-.33.42-.49.14-.17.19-.28.28-.47.1-.19.05-.36-.02-.5-.07-.14-.64-1.54-.88-2.1-.23-.55-.47-.48-.64-.49h-.55c-.19 0-.49.07-.75.35-.26.28-1 1-.97 2.43.02 1.43 1.05 2.82 1.2 3.01.14.19 2.07 3.16 5.02 4.43.7.3 1.25.48 1.68.62.7.22 1.34.19 1.85.11.56-.08 1.73-.71 1.97-1.39.24-.68.24-1.27.17-1.39-.07-.12-.26-.19-.55-.33z" fill="#fff"/>
+      </svg>
+      <div class="logo-text">
+        Gerador de Mensagens
+        <span id="userEmail">Assistente de vendas com IA</span>
+      </div>
+      <button class="btn-logout" onclick="logout()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Sair
+      </button>
+    </div>
+
+    <form id="form">
+      <div class="field">
+        <label for="nomeCliente">Nome da cliente</label>
+        <input id="nomeCliente" type="text" placeholder="Ex: Maria" autocomplete="off" required />
+      </div>
+
+      <div class="field">
+        <label for="produto">Produto / serviço</label>
+        <input id="produto" type="text" placeholder="Ex: Vestido floral tamanho M" required />
+      </div>
+
+      <div class="field">
+        <label for="contexto">Situação</label>
+        <textarea id="contexto" placeholder="Ex: Ela viu o vestido na vitrine semana passada e perguntou se chegaria em outras cores." required></textarea>
+      </div>
+
+      <div class="field">
+        <label for="tipoMensagem">Tipo de mensagem</label>
+        <select id="tipoMensagem">
+          <option value="geral">Geral</option>
+          <option value="pos_compra">Pós-compra</option>
+          <option value="reativacao">Reativação de cliente</option>
+          <option value="promocao">Promoção / oferta</option>
+          <option value="aniversario">Aniversário</option>
+          <option value="novidade">Novidade / lançamento</option>
+          <option value="cobranca">Cobrança suave</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="telefone">Telefone da cliente <span style="font-weight:400;color:#999">(opcional)</span></label>
+        <input id="telefone" type="tel" placeholder="Ex: (11) 99999-9999" autocomplete="off" />
+      </div>
+
+      <div class="field">
+        <label>Tom da mensagem</label>
+        <div class="tom-group" id="tomGroup">
+          <button type="button" class="tom-btn" data-tom="formal">Formal</button>
+          <button type="button" class="tom-btn active" data-tom="amigavel">Amigavel</button>
+          <button type="button" class="tom-btn" data-tom="casual">Casual</button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-gerar" id="btnGerar">
+        <div class="spinner"></div>
+        <span class="btn-label">Gerar mensagem</span>
+      </button>
+    </form>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="result-box" id="resultBox">
+      <div class="result-header">
+        <p>Mensagem gerada</p>
+        <button type="button" class="btn-copiar" id="btnCopiar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          <span id="copiarLabel">Copiar</span>
+        </button>
+      </div>
+      <div class="mensagem-texto" id="mensagemTexto"></div>
+    </div>
+  </div>
+
+  <script src="/auth.js"></script>
+  <script>
+    let session;
+
+    const form = document.getElementById('form');
+    const btnGerar = document.getElementById('btnGerar');
+    const resultBox = document.getElementById('resultBox');
+    const mensagemTexto = document.getElementById('mensagemTexto');
+    const btnCopiar = document.getElementById('btnCopiar');
+    const copiarLabel = document.getElementById('copiarLabel');
+    const errorMsg = document.getElementById('errorMsg');
+    let tomSelecionado = 'amigavel';
+
+    // Verifica sessão antes de renderizar qualquer coisa
+    (async () => {
+      session = await requireSession(['vendedora', 'gestor']);
+      if (!session) return;
+      document.getElementById('userEmail').textContent = session.email ?? 'Assistente de vendas com IA';
+    })();
+
+    document.getElementById('tomGroup').addEventListener('click', (e) => {
+      const btn = e.target.closest('.tom-btn');
+      if (!btn) return;
+      document.querySelectorAll('.tom-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      tomSelecionado = btn.dataset.tom;
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorMsg.classList.remove('visible');
+      resultBox.classList.remove('visible');
+      btnGerar.classList.add('loading');
+      btnGerar.disabled = true;
+
+      const telefoneVal = document.getElementById('telefone').value.trim();
+      const body = {
+        nomeCliente:   document.getElementById('nomeCliente').value.trim(),
+        produto:       document.getElementById('produto').value.trim(),
+        contexto:      document.getElementById('contexto').value.trim(),
+        tom:           tomSelecionado,
+        tipo_mensagem: document.getElementById('tipoMensagem').value,
+        telefone:      telefoneVal || null,
+      };
+
+      try {
+        const res = await fetch('/gerar-mensagem', {
+          method: 'POST',
+          headers: authHeaders(session),
+          body: JSON.stringify(body),
+        });
+
+        if (res.status === 401) {
+          clearSession();
+          location.href = '/login.html';
+          return;
+        }
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Erro ao gerar mensagem.');
+        }
+
+        mensagemTexto.textContent = data.mensagem;
+        resultBox.classList.add('visible');
+        copiarLabel.textContent = 'Copiar';
+        btnCopiar.classList.remove('copiado');
+        resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } catch (err) {
+        errorMsg.textContent = err.message;
+        errorMsg.classList.add('visible');
+      } finally {
+        btnGerar.classList.remove('loading');
+        btnGerar.disabled = false;
+      }
+    });
+
+    btnCopiar.addEventListener('click', async () => {
+      const texto = mensagemTexto.textContent;
+      try {
+        await navigator.clipboard.writeText(texto);
+        copiarLabel.textContent = 'Copiado!';
+        btnCopiar.classList.add('copiado');
+        setTimeout(() => {
+          copiarLabel.textContent = 'Copiar';
+          btnCopiar.classList.remove('copiado');
+        }, 2000);
+      } catch {
+        const sel = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(mensagemTexto);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    });
+  </script>
+</body>
+</html>

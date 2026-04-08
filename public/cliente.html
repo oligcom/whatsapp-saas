@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel do Cliente — Gerador WhatsApp</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      color: #222;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: #fff;
+      border-bottom: 1.5px solid #e8eaed;
+      padding: .9rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .header-logo { display: flex; align-items: center; gap: .5rem; flex: 1; }
+
+    .header-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #128c7e;
+      line-height: 1.2;
+    }
+
+    .header-sub {
+      font-size: .72rem;
+      color: #888;
+    }
+
+    .badge {
+      padding: .2rem .55rem;
+      border-radius: 20px;
+      font-size: .72rem;
+      font-weight: 700;
+      background: #e0f7f4;
+      color: #128c7e;
+      border: 1px solid #b2dfdb;
+    }
+
+    .btn-logout {
+      display: flex;
+      align-items: center;
+      gap: .3rem;
+      padding: .35rem .7rem;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      background: #fff;
+      font-size: .78rem;
+      font-weight: 600;
+      color: #888;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-logout:hover { border-color: #e53e3e; color: #e53e3e; }
+
+    /* ── Layout ── */
+    .main { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+
+    /* ── Cards de stats ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+      padding: 1.1rem 1.2rem;
+    }
+
+    .stat-label {
+      font-size: .72rem;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin-bottom: .35rem;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #128c7e;
+      line-height: 1;
+    }
+
+    .stat-sub {
+      font-size: .75rem;
+      color: #aaa;
+      margin-top: .3rem;
+    }
+
+    .usage-bar-wrap {
+      margin-top: .6rem;
+      height: 6px;
+      background: #e8eaed;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .usage-bar {
+      height: 100%;
+      border-radius: 10px;
+      background: #25d366;
+      transition: width .4s ease;
+    }
+
+    .usage-bar.warning { background: #f59e0b; }
+    .usage-bar.danger  { background: #ef4444; }
+
+    /* ── Seções de gráficos e tabelas ── */
+    .section-title {
+      font-size: .8rem;
+      font-weight: 700;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin: 2rem 0 .75rem;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .chart-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+      padding: 1.25rem;
+    }
+
+    .chart-card-title {
+      font-size: .8rem;
+      font-weight: 700;
+      color: #444;
+      margin-bottom: 1rem;
+    }
+
+    .chart-wrap { position: relative; height: 180px; }
+
+    /* ── Ranking ── */
+    .ranking-table { width: 100%; border-collapse: collapse; }
+
+    .ranking-table th {
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: #888;
+      text-align: left;
+      padding: .5rem .75rem;
+      border-bottom: 1.5px solid #f0f2f5;
+    }
+
+    .ranking-table td {
+      font-size: .88rem;
+      padding: .65rem .75rem;
+      border-bottom: 1px solid #f0f2f5;
+      color: #333;
+    }
+
+    .ranking-table tr:last-child td { border-bottom: none; }
+
+    .rank-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #e9faf0;
+      color: #128c7e;
+      font-weight: 800;
+      font-size: .8rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .rank-num.gold   { background: #fef9c3; color: #92400e; }
+    .rank-num.silver { background: #f1f5f9; color: #64748b; }
+    .rank-num.bronze { background: #fef3c7; color: #78350f; }
+
+    /* ── Histórico ── */
+    .history-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: .75rem;
+      gap: .5rem;
+      flex-wrap: wrap;
+    }
+
+    .history-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+      overflow: hidden;
+    }
+
+    .history-table-wrap { overflow-x: auto; }
+
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .85rem;
+    }
+
+    .history-table th {
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: #888;
+      text-align: left;
+      padding: .65rem .9rem;
+      background: #fafafa;
+      border-bottom: 1.5px solid #f0f2f5;
+      white-space: nowrap;
+    }
+
+    .history-table td {
+      padding: .65rem .9rem;
+      border-bottom: 1px solid #f5f5f5;
+      color: #333;
+      vertical-align: top;
+    }
+
+    .history-table tr:last-child td { border-bottom: none; }
+
+    .msg-preview {
+      max-width: 320px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #666;
+      font-size: .83rem;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: .18rem .55rem;
+      border-radius: 20px;
+      font-size: .72rem;
+      font-weight: 600;
+      background: #f0f2f5;
+      color: #555;
+    }
+
+    .pill.formal   { background: #ede9fe; color: #5b21b6; }
+    .pill.amigavel { background: #dcfce7; color: #166534; }
+    .pill.casual   { background: #fef9c3; color: #78350f; }
+
+    /* ── Paginação ── */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .4rem;
+      padding: 1rem;
+      border-top: 1.5px solid #f0f2f5;
+    }
+
+    .page-btn {
+      padding: .35rem .65rem;
+      border: 1.5px solid #ddd;
+      border-radius: 7px;
+      background: #fff;
+      font-size: .82rem;
+      font-weight: 600;
+      color: #555;
+      cursor: pointer;
+      transition: all .15s;
+    }
+
+    .page-btn:hover:not(:disabled) { border-color: #25d366; color: #128c7e; }
+    .page-btn.active { border-color: #25d366; background: #e9faf0; color: #128c7e; }
+    .page-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── Estados ── */
+    .spinner-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem;
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid #e8eaed;
+      border-top-color: #25d366;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty {
+      text-align: center;
+      padding: 2.5rem;
+      color: #aaa;
+      font-size: .9rem;
+    }
+
+    .error-banner {
+      background: #fff0f0;
+      border: 1.5px solid #fca5a5;
+      border-radius: 10px;
+      padding: .85rem 1rem;
+      color: #b91c1c;
+      font-size: .875rem;
+      margin-bottom: 1rem;
+      display: none;
+    }
+
+    .error-banner.visible { display: block; }
+
+    /* ── Botão gerar ── */
+    .btn-gerar-header {
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      padding: .45rem .9rem;
+      background: #25d366;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: .82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s, opacity .15s;
+      white-space: nowrap;
+    }
+    .btn-gerar-header:hover:not(:disabled) { background: #1da851; }
+    .btn-gerar-header:disabled { background: #aaa; opacity: .65; cursor: not-allowed; }
+
+    .stat-card.limite-atingido {
+      background: #fff5f5;
+      border: 1.5px solid #fca5a5;
+    }
+    .stat-card.limite-atingido .stat-label { color: #ef4444; }
+    .stat-card.limite-atingido .stat-sub   { color: #ef4444; font-weight: 600; }
+
+    /* ── Modal ── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s;
+    }
+    .overlay.open { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.18);
+      padding: 1.75rem 1.5rem;
+      width: 100%;
+      max-width: 460px;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: translateY(12px);
+      transition: transform .2s;
+    }
+    .overlay.open .modal { transform: translateY(0); }
+
+    .modal-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: #128c7e;
+      margin-bottom: 1.25rem;
+    }
+
+    .modal label {
+      display: block;
+      font-size: .78rem;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: .3rem;
+    }
+
+    .modal-field { margin-bottom: 1rem; }
+
+    .modal input[type="text"],
+    .modal input[type="tel"],
+    .modal select,
+    .modal textarea {
+      width: 100%;
+      padding: .6rem .75rem;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      font-size: .92rem;
+      font-family: inherit;
+      color: #222;
+      background: #fafafa;
+      transition: border-color .15s;
+    }
+    .modal input:focus, .modal textarea:focus {
+      outline: none;
+      border-color: #25d366;
+      background: #fff;
+    }
+    .modal textarea { resize: vertical; min-height: 76px; }
+
+    .tom-group { display: flex; gap: .5rem; }
+    .tom-btn {
+      flex: 1;
+      padding: .5rem;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      background: #fafafa;
+      font-size: .83rem;
+      font-weight: 500;
+      color: #555;
+      cursor: pointer;
+      transition: all .15s;
+      text-align: center;
+    }
+    .tom-btn:hover { border-color: #25d366; color: #128c7e; }
+    .tom-btn.active { border-color: #25d366; background: #e9faf0; color: #128c7e; font-weight: 700; }
+
+    .btn-submit {
+      width: 100%;
+      padding: .7rem;
+      background: #25d366;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: .95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s, opacity .15s;
+      margin-top: .5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+    }
+    .btn-submit:hover { background: #1da851; }
+    .btn-submit:disabled { opacity: .6; cursor: not-allowed; }
+
+    .btn-submit .spin {
+      width: 16px; height: 16px;
+      border: 2.5px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+    .btn-submit.loading .spin { display: block; }
+    .btn-submit.loading .lbl { display: none; }
+
+    .modal-error {
+      margin-top: .75rem;
+      padding: .55rem .8rem;
+      background: #fff0f0;
+      border: 1.5px solid #fca5a5;
+      border-radius: 8px;
+      font-size: .83rem;
+      color: #b91c1c;
+      display: none;
+    }
+    .modal-error.visible { display: block; }
+
+    .result-box {
+      margin-top: 1rem;
+      display: none;
+    }
+    .result-box.visible { display: block; }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: .4rem;
+    }
+    .result-header p { font-size: .78rem; font-weight: 600; color: #444; }
+
+    .btn-copiar {
+      display: flex;
+      align-items: center;
+      gap: .3rem;
+      padding: .3rem .6rem;
+      border: 1.5px solid #ddd;
+      border-radius: 7px;
+      background: #fff;
+      font-size: .78rem;
+      font-weight: 600;
+      color: #555;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-copiar:hover { border-color: #25d366; color: #128c7e; }
+    .btn-copiar.copiado { border-color: #25d366; background: #e9faf0; color: #128c7e; }
+
+    .mensagem-texto {
+      background: #f0f2f5;
+      border-radius: 10px;
+      padding: .9rem 1rem;
+      font-size: .9rem;
+      line-height: 1.65;
+      color: #222;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: .5rem;
+      margin-top: 1rem;
+      padding-top: .75rem;
+      border-top: 1.5px solid #f0f2f5;
+    }
+    .btn-fechar {
+      padding: .45rem .9rem;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      background: #fff;
+      font-size: .85rem;
+      font-weight: 600;
+      color: #666;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-fechar:hover { border-color: #aaa; color: #333; }
+
+    /* ── Tabs de navegação (cliente) ── */
+    .cli-tabs-bar {
+      background: #fff;
+      border-bottom: 1.5px solid #e8eaed;
+      padding: 0 1rem;
+    }
+    .cli-tabs {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      gap: .25rem;
+    }
+    .cli-tab {
+      padding: .65rem 1.1rem;
+      border: none;
+      border-bottom: 2.5px solid transparent;
+      background: none;
+      font-size: .85rem;
+      font-weight: 600;
+      color: #888;
+      cursor: pointer;
+      transition: all .15s;
+      margin-bottom: -1.5px;
+    }
+    .cli-tab:hover { color: #128c7e; }
+    .cli-tab.active { color: #128c7e; border-bottom-color: #25d366; }
+
+    .cli-pane { display: none; }
+    .cli-pane.active { display: block; }
+
+    /* ── Minha Equipe ── */
+    .equipe-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .equipe-titulo {
+      font-size: .88rem;
+      font-weight: 700;
+      color: #333;
+    }
+    .equipe-sub {
+      font-size: .78rem;
+      color: #888;
+      margin-top: .15rem;
+    }
+    .btn-nova-vendedora {
+      display: flex;
+      align-items: center;
+      gap: .35rem;
+      padding: .45rem .9rem;
+      background: #25d366;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: .83rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-nova-vendedora:hover { background: #1da851; }
+    .btn-nova-vendedora:disabled { opacity: .6; cursor: not-allowed; }
+
+    .vendedora-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: .75rem;
+    }
+    .vendedora-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #e9faf0;
+      color: #128c7e;
+      font-weight: 800;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .vendedora-info { flex: 1; min-width: 0; }
+    .vendedora-email {
+      font-weight: 600;
+      color: #222;
+      font-size: .88rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .vendedora-meta { font-size: .75rem; color: #aaa; margin-top: .15rem; }
+
+    .btn-editar-vendedora {
+      padding: .35rem .75rem;
+      border: 1.5px solid #ddd;
+      border-radius: 7px;
+      background: #fff;
+      font-size: .78rem;
+      font-weight: 600;
+      color: #555;
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .btn-editar-vendedora:hover { border-color: #25d366; color: #128c7e; }
+
+    /* ── Overlay de edição de vendedora ── */
+    .overlay-eq {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s;
+    }
+    .overlay-eq.open { opacity: 1; pointer-events: all; }
+    .overlay-eq .modal {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.18);
+      padding: 1.75rem 1.5rem;
+      width: 100%;
+      max-width: 420px;
+      transform: translateY(12px);
+      transition: transform .2s;
+    }
+    .overlay-eq.open .modal { transform: translateY(0); }
+    .eq-field { margin-bottom: 1rem; }
+    .eq-field label {
+      display: block;
+      font-size: .78rem;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: .3rem;
+    }
+    .eq-field input {
+      width: 100%;
+      padding: .6rem .75rem;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      font-size: .9rem;
+      font-family: inherit;
+      color: #222;
+      background: #fafafa;
+    }
+    .eq-field input:focus { outline: none; border-color: #25d366; background: #fff; }
+    .eq-msg { margin-top: .75rem; padding: .5rem .8rem; border-radius: 8px; font-size: .82rem; display: none; }
+    .eq-msg.err { background: #fff0f0; border: 1.5px solid #fca5a5; color: #b91c1c; }
+    .eq-msg.ok { background: #f0fdf4; border: 1.5px solid #86efac; color: #166534; }
+    .eq-msg.visible { display: block; }
+    .eq-footer { display: flex; gap: .75rem; justify-content: flex-end; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #f0f2f5; }
+    .eq-btn-cancel { padding: .55rem 1rem; border: 1.5px solid #ddd; border-radius: 8px; background: #fff; font-size: .88rem; font-weight: 600; color: #666; cursor: pointer; }
+    .eq-btn-save { padding: .55rem 1.2rem; border: none; border-radius: 8px; background: #25d366; color: #fff; font-size: .88rem; font-weight: 700; cursor: pointer; }
+    .eq-btn-save:disabled { opacity: .6; cursor: not-allowed; }
+
+    /* ── Aba Cupom ── */
+    .cupom-card {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+      padding: 1.75rem;
+      max-width: 480px;
+    }
+    .cupom-titulo { font-size: 1rem; font-weight: 700; color: #128c7e; margin-bottom: .5rem; }
+    .cupom-desc { font-size: .85rem; color: #666; margin-bottom: 1.5rem; line-height: 1.5; }
+    .cupom-row { display: flex; gap: .75rem; }
+    .cupom-input {
+      flex: 1;
+      padding: .65rem .85rem;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      font-size: .95rem;
+      font-family: monospace;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      background: #fafafa;
+    }
+    .cupom-input:focus { outline: none; border-color: #25d366; background: #fff; }
+    .cupom-btn {
+      padding: .65rem 1.25rem;
+      background: #25d366;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: .9rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .15s;
+    }
+    .cupom-btn:hover { background: #1da851; }
+    .cupom-btn:disabled { opacity: .6; cursor: not-allowed; }
+    .cupom-result { margin-top: 1rem; padding: .75rem 1rem; border-radius: 8px; font-size: .88rem; display: none; }
+    .cupom-result.ok { background: #f0fdf4; border: 1.5px solid #86efac; color: #166534; display: block; }
+    .cupom-result.err { background: #fff0f0; border: 1.5px solid #fca5a5; color: #b91c1c; display: block; }
+
+    /* ── Banner de acesso expirado ── */
+    .expired-banner {
+      background: #fff5f5;
+      border: 1.5px solid #fca5a5;
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+      display: none;
+    }
+    .expired-banner.visible { display: block; }
+    .expired-banner h3 { color: #b91c1c; font-size: .95rem; margin-bottom: .35rem; }
+    .expired-banner p { font-size: .84rem; color: #666; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-logo">
+      <svg width="34" height="34" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="19" cy="19" r="19" fill="#25d366"/>
+        <path d="M27.5 10.5A11.5 11.5 0 0 0 7.9 24.1L6.5 31.5l7.6-1.4A11.5 11.5 0 1 0 27.5 10.5zm-8.5 17a9.4 9.4 0 0 1-4.8-1.3l-.35-.2-3.6.66.68-3.5-.23-.36a9.5 9.5 0 1 1 8.3 4.7zm5.2-7.1c-.28-.14-1.67-.82-1.93-.91-.26-.1-.45-.14-.64.14-.19.28-.73.91-.9 1.1-.16.19-.33.21-.61.07a7.7 7.7 0 0 1-2.27-1.4 8.5 8.5 0 0 1-1.57-1.95c-.16-.28 0-.43.13-.57.13-.12.28-.33.42-.49.14-.17.19-.28.28-.47.1-.19.05-.36-.02-.5-.07-.14-.64-1.54-.88-2.1-.23-.55-.47-.48-.64-.49h-.55c-.19 0-.49.07-.75.35-.26.28-1 1-.97 2.43.02 1.43 1.05 2.82 1.2 3.01.14.19 2.07 3.16 5.02 4.43.7.3 1.25.48 1.68.62.7.22 1.34.19 1.85.11.56-.08 1.73-.71 1.97-1.39.24-.68.24-1.27.17-1.39-.07-.12-.26-.19-.55-.33z" fill="#fff"/>
+      </svg>
+      <div>
+        <div class="header-title">Painel da Loja</div>
+        <div class="header-sub" id="userEmail">Carregando...</div>
+      </div>
+    </div>
+    <span class="badge">Cliente</span>
+    <button class="btn-gerar-header" id="btnGerarHeader" onclick="abrirModal()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      Gerar mensagem
+    </button>
+    <button class="btn-logout" onclick="logout()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Sair
+    </button>
+  </header>
+
+  <!-- Barra de tabs -->
+  <div class="cli-tabs-bar">
+    <div class="cli-tabs">
+      <button class="cli-tab active" data-pane="dashboard" onclick="switchCliTab('dashboard')">Dashboard</button>
+      <button class="cli-tab" data-pane="equipe" onclick="switchCliTab('equipe')">Minha Equipe</button>
+      <button class="cli-tab" data-pane="cupom" onclick="switchCliTab('cupom')">Cupom</button>
+    </div>
+  </div>
+
+  <!-- ── Tab: Dashboard ────────────────────────────────────── -->
+  <div id="cli-pane-dashboard" class="cli-pane active">
+  <main class="main">
+    <div class="error-banner" id="errorBanner"></div>
+
+    <!-- Stats cards -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card"><div class="spinner-wrap"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="section-title">Análise do mês atual</div>
+    <div class="charts-grid" id="chartsGrid">
+      <div class="chart-card"><div class="spinner-wrap"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- Ranking vendedoras -->
+    <div class="section-title">Ranking de uso por vendedora (mês atual)</div>
+    <div class="history-card" id="rankingCard">
+      <div class="spinner-wrap"><div class="spinner"></div></div>
+    </div>
+
+    <!-- Histórico completo -->
+    <div class="section-title">Histórico completo de mensagens</div>
+    <div class="history-controls">
+      <span id="historyInfo" style="font-size:.82rem;color:#888;"></span>
+    </div>
+    <div class="history-card" id="historyCard">
+      <div class="spinner-wrap"><div class="spinner"></div></div>
+    </div>
+    <div class="pagination" id="pagination" style="display:none;"></div>
+  </main>
+  </div><!-- /cli-pane-dashboard -->
+
+  <!-- ── Tab: Minha Equipe ─────────────────────────────────── -->
+  <div id="cli-pane-equipe" class="cli-pane">
+    <div class="main">
+      <div class="expired-banner" id="expiredBannerEquipe">
+        <h3>Acesso expirado</h3>
+        <p>Seu período de trial ou acesso acabou. Vá até a aba <strong>Cupom</strong> e insira um código para continuar.</p>
+      </div>
+
+      <div class="equipe-header">
+        <div>
+          <div class="equipe-titulo">Minha Equipe de Vendedoras</div>
+          <div class="equipe-sub" id="equipeSubtitulo">Carregando...</div>
+        </div>
+        <button class="btn-nova-vendedora" id="btnNovaVendedora" onclick="abrirModalNovaVendedora()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nova vendedora
+        </button>
+      </div>
+
+      <div id="equipeList">
+        <div class="spinner-wrap"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tab: Cupom ────────────────────────────────────────── -->
+  <div id="cli-pane-cupom" class="cli-pane">
+    <div class="main">
+      <div class="cupom-card">
+        <div class="cupom-titulo">Inserir Cupom de Acesso</div>
+        <div class="cupom-desc">
+          Tem um código de cupom? Insira abaixo para liberar o acesso e adicionar créditos ao seu workspace.
+        </div>
+        <div class="cupom-row">
+          <input class="cupom-input" id="cupomCodigo" type="text" placeholder="CÓDIGO DO CUPOM" autocomplete="off" />
+          <button class="cupom-btn" id="btnAplicarCupom" onclick="aplicarCupom()">Aplicar</button>
+        </div>
+        <div class="cupom-result" id="cupomResult"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Overlay: Nova Vendedora ───────────────────────────── -->
+  <div class="overlay-eq" id="overlayNovaVendedora" onclick="fecharOverlayEq('overlayNovaVendedora', event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-title">Nova vendedora</div>
+      <div class="eq-field">
+        <label>Email *</label>
+        <input type="email" id="nvEmail" placeholder="vendedora@loja.com" autocomplete="off" />
+      </div>
+      <div class="eq-field">
+        <label>Senha * <span style="font-weight:400;color:#aaa">(mín. 8 caracteres)</span></label>
+        <input type="password" id="nvSenha" placeholder="Senha inicial" autocomplete="new-password" />
+      </div>
+      <div class="eq-msg err" id="nvError"></div>
+      <div class="eq-msg ok" id="nvSuccess"></div>
+      <div class="eq-footer">
+        <button class="eq-btn-cancel" onclick="fecharOverlayEq('overlayNovaVendedora')">Cancelar</button>
+        <button class="eq-btn-save" id="btnSalvarNovaVendedora" onclick="criarVendedora()">Criar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Overlay: Editar Vendedora ─────────────────────────── -->
+  <div class="overlay-eq" id="overlayEditarVendedora" onclick="fecharOverlayEq('overlayEditarVendedora', event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-title">Editar vendedora</div>
+      <div class="eq-field">
+        <label>Novo email <span style="font-weight:400;color:#aaa">(deixe em branco para não alterar)</span></label>
+        <input type="email" id="evEmail" autocomplete="off" />
+      </div>
+      <div class="eq-field">
+        <label>Nova senha <span style="font-weight:400;color:#aaa">(deixe em branco para não alterar)</span></label>
+        <input type="password" id="evSenha" autocomplete="new-password" />
+      </div>
+      <div class="eq-msg err" id="evError"></div>
+      <div class="eq-msg ok" id="evSuccess"></div>
+      <div class="eq-footer">
+        <button class="eq-btn-cancel" onclick="fecharOverlayEq('overlayEditarVendedora')">Cancelar</button>
+        <button class="eq-btn-save" id="btnSalvarEditarVendedora" onclick="salvarVendedora()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Gerar Mensagem -->
+  <div class="overlay" id="overlayGerar" onclick="fecharModalFora(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-title">Gerar mensagem</div>
+
+      <div class="modal-field">
+        <label for="mNomeCliente">Nome da cliente *</label>
+        <input type="text" id="mNomeCliente" placeholder="Ex: Maria" autocomplete="off" />
+      </div>
+
+      <div class="modal-field">
+        <label for="mProduto">Produto / serviço *</label>
+        <input type="text" id="mProduto" placeholder="Ex: Vestido floral tamanho M" />
+      </div>
+
+      <div class="modal-field">
+        <label for="mContexto">Situação *</label>
+        <textarea id="mContexto" placeholder="Ex: Ela viu o vestido na vitrine semana passada e perguntou se chegaria em outras cores."></textarea>
+      </div>
+
+      <div class="modal-field">
+        <label for="mTipoMensagem">Tipo de mensagem</label>
+        <select id="mTipoMensagem">
+          <option value="geral">Geral</option>
+          <option value="pos_compra">Pós-compra</option>
+          <option value="reativacao">Reativação de cliente</option>
+          <option value="promocao">Promoção / oferta</option>
+          <option value="aniversario">Aniversário</option>
+          <option value="novidade">Novidade / lançamento</option>
+          <option value="cobranca">Cobrança suave</option>
+        </select>
+      </div>
+
+      <div class="modal-field">
+        <label for="mTelefone">Telefone <span style="font-weight:400;color:#999">(opcional)</span></label>
+        <input type="tel" id="mTelefone" placeholder="Ex: (11) 99999-9999" autocomplete="off" />
+      </div>
+
+      <div class="modal-field">
+        <label>Tom da mensagem</label>
+        <div class="tom-group" id="tomGroup">
+          <button type="button" class="tom-btn" data-tom="formal">Formal</button>
+          <button type="button" class="tom-btn active" data-tom="amigavel">Amigavel</button>
+          <button type="button" class="tom-btn" data-tom="casual">Casual</button>
+        </div>
+      </div>
+
+      <button class="btn-submit" id="btnSubmitGerar" onclick="gerarMensagem()">
+        <div class="spin"></div>
+        <span class="lbl">Gerar mensagem</span>
+      </button>
+
+      <div class="modal-error" id="modalError"></div>
+
+      <div class="result-box" id="resultBox">
+        <div class="result-header">
+          <p>Mensagem gerada</p>
+          <button class="btn-copiar" id="btnCopiar" onclick="copiarMensagem()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            <span id="copiarLabel">Copiar</span>
+          </button>
+        </div>
+        <div class="mensagem-texto" id="mensagemTexto"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-fechar" onclick="fecharModal()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/auth.js"></script>
+  <script>
+    let session;
+    let statsData = null;
+    let currentPage = 1;
+    const PAGE_SIZE = 20;
+    let equipeCarregada = false;
+    let vendedoraEditandoId = null;
+
+    const TIPO_LABELS = {
+      geral:       'Geral',
+      pos_compra:  'Pós-compra',
+      reativacao:  'Reativação',
+      promocao:    'Promoção',
+      aniversario: 'Aniversário',
+      novidade:    'Novidade',
+      cobranca:    'Cobrança',
+    };
+
+    function showError(msg) {
+      const el = document.getElementById('errorBanner');
+      el.textContent = msg;
+      el.classList.add('visible');
+    }
+
+    function fmtDate(iso) {
+      const d = new Date(iso);
+      return d.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit' })
+           + ' ' + d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+    }
+
+    // ── Stats cards ──────────────────────────────────────────────────────────
+    function renderStats(s) {
+      const disponivel = Math.max(0, s.limite_mes - s.mes);
+      const pct = s.limite_mes > 0 ? Math.round((s.mes / s.limite_mes) * 100) : 0;
+      const barClass = pct >= 100 ? 'danger' : pct >= 90 ? 'danger' : pct >= 70 ? 'warning' : '';
+      const limiteAtingido = disponivel === 0;
+
+      // Habilita/desabilita botão do header
+      const btnHeader = document.getElementById('btnGerarHeader');
+      if (btnHeader) {
+        btnHeader.disabled = limiteAtingido;
+        btnHeader.title = limiteAtingido ? 'Limite mensal atingido' : '';
+      }
+
+      document.getElementById('statsGrid').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-label">Mensagens hoje</div>
+          <div class="stat-value">${s.hoje}</div>
+          <div class="stat-sub">no dia atual</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Mensagens no mês</div>
+          <div class="stat-value">${s.mes}</div>
+          <div class="stat-sub">mês corrente</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Limite mensal</div>
+          <div class="stat-value">${s.limite_mes}</div>
+          <div class="stat-sub">${pct}% utilizado</div>
+          <div class="usage-bar-wrap">
+            <div class="usage-bar ${barClass}" style="width:${Math.min(pct,100)}%"></div>
+          </div>
+        </div>
+        <div class="stat-card ${limiteAtingido ? 'limite-atingido' : ''}">
+          <div class="stat-label">Disponível</div>
+          <div class="stat-value" style="color:${limiteAtingido ? '#ef4444' : pct>=90 ? '#ef4444' : '#128c7e'}">${disponivel}</div>
+          <div class="stat-sub">${limiteAtingido ? 'Limite atingido — contate o gestor' : 'mensagens restantes'}</div>
+        </div>
+      `;
+    }
+
+    // ── Gráficos ─────────────────────────────────────────────────────────────
+    function renderCharts(s) {
+      document.getElementById('chartsGrid').innerHTML = `
+        <div class="chart-card">
+          <div class="chart-card-title">Horários de pico (hora do dia)</div>
+          <div class="chart-wrap"><canvas id="chartHoras"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card-title">Tipos de mensagem mais gerados</div>
+          <div class="chart-wrap"><canvas id="chartTipos"></canvas></div>
+        </div>
+      `;
+
+      // Gráfico de horas
+      const horasLabels = s.pico_horas.map(h => `${String(h.hora).padStart(2,'0')}h`);
+      const horasData   = s.pico_horas.map(h => h.total);
+      new Chart(document.getElementById('chartHoras'), {
+        type: 'bar',
+        data: {
+          labels: horasLabels,
+          datasets: [{
+            data: horasData,
+            backgroundColor: 'rgba(37,211,102,.6)',
+            borderColor:     '#25d366',
+            borderWidth: 1,
+            borderRadius: 3,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: '#f0f2f5' } },
+            x: { ticks: { font: { size: 9 }, maxRotation: 45 }, grid: { display: false } },
+          }
+        }
+      });
+
+      // Gráfico de tipos
+      const COLORS = ['#25d366','#128c7e','#0d9488','#059669','#065f46','#34d399','#6ee7b7'];
+      const tipos  = s.tipos_mensagem.length ? s.tipos_mensagem : [{ tipo: 'sem dados', total: 1 }];
+      new Chart(document.getElementById('chartTipos'), {
+        type: 'doughnut',
+        data: {
+          labels: tipos.map(t => TIPO_LABELS[t.tipo] ?? t.tipo),
+          datasets: [{
+            data:            tipos.map(t => t.total),
+            backgroundColor: tipos.map((_, i) => COLORS[i % COLORS.length]),
+            borderWidth: 2,
+            borderColor: '#fff',
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12, padding: 8 } }
+          }
+        }
+      });
+    }
+
+    // ── Ranking ───────────────────────────────────────────────────────────────
+    function renderRanking(ranking) {
+      if (!ranking.length) {
+        document.getElementById('rankingCard').innerHTML =
+          '<div class="empty">Nenhuma mensagem gerada este mês.</div>';
+        return;
+      }
+
+      const rankClasses = ['gold', 'silver', 'bronze'];
+      const rows = ranking.map((v, i) => `
+        <tr>
+          <td><span class="rank-num ${rankClasses[i] ?? ''}">${i + 1}</span></td>
+          <td>${v.email}</td>
+          <td><strong>${v.total}</strong></td>
+        </tr>
+      `).join('');
+
+      document.getElementById('rankingCard').innerHTML = `
+        <div style="overflow-x:auto;">
+          <table class="ranking-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Vendedora</th>
+                <th>Mensagens</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    // ── Histórico ─────────────────────────────────────────────────────────────
+    async function loadHistory(page) {
+      document.getElementById('historyCard').innerHTML =
+        '<div class="spinner-wrap"><div class="spinner"></div></div>';
+      document.getElementById('pagination').style.display = 'none';
+
+      try {
+        const res = await fetch(`/cliente/mensagens?page=${page}&limit=${PAGE_SIZE}`, {
+          headers: authHeaders(session)
+        });
+        if (!res.ok) throw new Error('Erro ao carregar histórico');
+        const data = await res.json();
+
+        document.getElementById('historyInfo').textContent =
+          `${data.total} mensagem${data.total !== 1 ? 's' : ''} no total`;
+
+        if (!data.mensagens.length) {
+          document.getElementById('historyCard').innerHTML =
+            '<div class="empty">Nenhuma mensagem registrada ainda.</div>';
+          return;
+        }
+
+        const rows = data.mensagens.map(m => `
+          <tr>
+            <td style="white-space:nowrap;font-size:.78rem;color:#888">${fmtDate(m.created_at)}</td>
+            <td>${m.nome_cliente}</td>
+            <td style="font-size:.8rem;color:#888">${m.telefone ?? '—'}</td>
+            <td><span class="pill">${TIPO_LABELS[m.tipo_mensagem] ?? m.tipo_mensagem}</span></td>
+            <td><span class="pill ${m.tom}">${m.tom}</span></td>
+            <td><div class="msg-preview" title="${m.mensagem.replace(/"/g,'&quot;')}">${m.mensagem}</div></td>
+            <td style="font-size:.78rem;color:#aaa;white-space:nowrap">${m.usuario_email}</td>
+          </tr>
+        `).join('');
+
+        document.getElementById('historyCard').innerHTML = `
+          <div class="history-table-wrap">
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Cliente</th>
+                  <th>Telefone</th>
+                  <th>Tipo</th>
+                  <th>Tom</th>
+                  <th>Mensagem</th>
+                  <th>Vendedora</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        `;
+
+        // Paginação
+        const totalPages = Math.ceil(data.total / PAGE_SIZE);
+        if (totalPages > 1) {
+          renderPagination(page, totalPages);
+        }
+      } catch (err) {
+        document.getElementById('historyCard').innerHTML =
+          `<div class="empty">Erro ao carregar histórico: ${err.message}</div>`;
+      }
+    }
+
+    function renderPagination(current, total) {
+      const pag = document.getElementById('pagination');
+      pag.style.display = 'flex';
+      let html = `<button class="page-btn" onclick="goPage(${current-1})" ${current===1?'disabled':''}>← Anterior</button>`;
+      for (let p = Math.max(1, current-2); p <= Math.min(total, current+2); p++) {
+        html += `<button class="page-btn ${p===current?'active':''}" onclick="goPage(${p})">${p}</button>`;
+      }
+      html += `<button class="page-btn" onclick="goPage(${current+1})" ${current===total?'disabled':''}>Próxima →</button>`;
+      pag.innerHTML = html;
+    }
+
+    function goPage(p) {
+      currentPage = p;
+      loadHistory(p);
+      document.querySelector('.main').scrollTop = 0;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ── Modal Gerar Mensagem ──────────────────────────────────────────────────
+    let tomSelecionado = 'amigavel';
+
+    document.getElementById('tomGroup').addEventListener('click', (e) => {
+      const btn = e.target.closest('.tom-btn');
+      if (!btn) return;
+      document.querySelectorAll('.tom-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      tomSelecionado = btn.dataset.tom;
+    });
+
+    function abrirModal() {
+      document.getElementById('overlayGerar').classList.add('open');
+      document.getElementById('mNomeCliente').focus();
+    }
+
+    function fecharModal() {
+      document.getElementById('overlayGerar').classList.remove('open');
+      // Reseta campos para próxima abertura
+      ['mNomeCliente','mProduto','mContexto','mTelefone'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      document.getElementById('mTipoMensagem').value = 'geral';
+      document.querySelectorAll('.tom-btn').forEach(b => b.classList.toggle('active', b.dataset.tom === 'amigavel'));
+      tomSelecionado = 'amigavel';
+      document.getElementById('modalError').classList.remove('visible');
+      document.getElementById('resultBox').classList.remove('visible');
+    }
+
+    function fecharModalFora(e) {
+      if (e.target === document.getElementById('overlayGerar')) fecharModal();
+    }
+
+    async function gerarMensagem() {
+      const nomeCliente = document.getElementById('mNomeCliente').value.trim();
+      const produto     = document.getElementById('mProduto').value.trim();
+      const contexto    = document.getElementById('mContexto').value.trim();
+      const errorEl     = document.getElementById('modalError');
+
+      errorEl.classList.remove('visible');
+      document.getElementById('resultBox').classList.remove('visible');
+
+      if (!nomeCliente || !produto || !contexto) {
+        errorEl.textContent = 'Preencha todos os campos obrigatórios.';
+        errorEl.classList.add('visible');
+        return;
+      }
+
+      const btn = document.getElementById('btnSubmitGerar');
+      btn.classList.add('loading');
+      btn.disabled = true;
+
+      try {
+        const tipo_mensagem = document.getElementById('mTipoMensagem').value;
+        const telefoneVal   = document.getElementById('mTelefone').value.trim();
+        const res = await fetch('/gerar-mensagem', {
+          method: 'POST',
+          headers: authHeaders(session),
+          body: JSON.stringify({
+            nomeCliente,
+            produto,
+            contexto,
+            tom:           tomSelecionado,
+            tipo_mensagem,
+            telefone:      telefoneVal || null,
+          }),
+        });
+
+        if (res.status === 401) { clearSession(); location.href = '/login.html'; return; }
+
+        const data = await res.json();
+        if (res.status === 403 && data.code === 'ACCESS_EXPIRED') {
+          fecharModal();
+          switchCliTab('cupom');
+          throw new Error(data.error);
+        }
+        if (res.status === 429) {
+          // Atualiza card imediatamente para refletir limite atingido
+          fetch('/cliente/stats', { headers: authHeaders(session) })
+            .then(r => r.ok ? r.json() : null)
+            .then(s => { if (s) { renderStats(s); statsData = s; } });
+          throw new Error(data.error);
+        }
+        if (!res.ok) throw new Error(data.error || 'Erro ao gerar mensagem.');
+
+        document.getElementById('mensagemTexto').textContent = data.mensagem;
+        document.getElementById('resultBox').classList.add('visible');
+        document.getElementById('copiarLabel').textContent = 'Copiar';
+        document.getElementById('btnCopiar').classList.remove('copiado');
+
+        // Atualiza stats e histórico em background
+        loadHistory(1);
+        fetch('/cliente/stats', { headers: authHeaders(session) })
+          .then(r => r.ok ? r.json() : null)
+          .then(s => { if (s) { renderStats(s); statsData = s; } });
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.add('visible');
+      } finally {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+      }
+    }
+
+    async function copiarMensagem() {
+      const texto = document.getElementById('mensagemTexto').textContent;
+      const btn   = document.getElementById('btnCopiar');
+      try {
+        await navigator.clipboard.writeText(texto);
+        document.getElementById('copiarLabel').textContent = 'Copiado!';
+        btn.classList.add('copiado');
+        setTimeout(() => {
+          document.getElementById('copiarLabel').textContent = 'Copiar';
+          btn.classList.remove('copiado');
+        }, 2000);
+      } catch {
+        const sel = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(document.getElementById('mensagemTexto'));
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    }
+
+    // ── Tabs ─────────────────────────────────────────────────────────────────
+    function switchCliTab(pane) {
+      document.querySelectorAll('.cli-tab').forEach(b =>
+        b.classList.toggle('active', b.getAttribute('data-pane') === pane)
+      );
+      document.querySelectorAll('.cli-pane').forEach(p => p.classList.remove('active'));
+      document.getElementById(`cli-pane-${pane}`).classList.add('active');
+      if (pane === 'equipe' && !equipeCarregada) carregarEquipe();
+    }
+
+    // ── Minha Equipe ─────────────────────────────────────────────────────────
+    function fmtDateShort(iso) {
+      if (!iso) return '—';
+      return new Date(iso).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit' });
+    }
+
+    async function carregarEquipe() {
+      equipeCarregada = true;
+      document.getElementById('equipeList').innerHTML =
+        '<div class="spinner-wrap"><div class="spinner"></div></div>';
+      try {
+        const res = await fetch('/cliente/equipe', { headers: authHeaders(session) });
+        if (!res.ok) throw new Error('Erro ao carregar equipe');
+        const d = await res.json();
+        renderEquipe(d);
+      } catch (err) {
+        document.getElementById('equipeList').innerHTML =
+          `<div class="empty">Erro: ${err.message}</div>`;
+      }
+    }
+
+    function renderEquipe(d) {
+      const { vendedoras, total, limite } = d;
+      const atingido = total >= limite;
+      document.getElementById('equipeSubtitulo').textContent =
+        `${total} de ${limite} vendedoras cadastradas`;
+      document.getElementById('btnNovaVendedora').disabled = atingido;
+
+      if (!vendedoras.length) {
+        document.getElementById('equipeList').innerHTML =
+          '<div class="empty">Nenhuma vendedora cadastrada ainda. Adicione a primeira!</div>';
+        return;
+      }
+
+      document.getElementById('equipeList').innerHTML = vendedoras.map(v => {
+        const inicial = (v.email?.[0] ?? '?').toUpperCase();
+        return `
+          <div class="vendedora-card">
+            <div class="vendedora-avatar">${inicial}</div>
+            <div class="vendedora-info">
+              <div class="vendedora-email">${v.email}</div>
+              <div class="vendedora-meta">
+                Cadastrada em ${fmtDateShort(v.created_at)}
+                ${v.last_sign_in_at ? ' · Último acesso: ' + fmtDateShort(v.last_sign_in_at) : ''}
+              </div>
+            </div>
+            <button class="btn-editar-vendedora" onclick="abrirEditarVendedora('${v.id}', '${v.email.replace(/'/g,"\\'")}')">Editar</button>
+          </div>`;
+      }).join('');
+    }
+
+    function abrirModalNovaVendedora() {
+      document.getElementById('nvEmail').value = '';
+      document.getElementById('nvSenha').value = '';
+      setEqMsg('nvError', null);
+      setEqMsg('nvSuccess', null);
+      document.getElementById('overlayNovaVendedora').classList.add('open');
+    }
+
+    function abrirEditarVendedora(id, email) {
+      vendedoraEditandoId = id;
+      document.getElementById('evEmail').value = email;
+      document.getElementById('evSenha').value = '';
+      setEqMsg('evError', null);
+      setEqMsg('evSuccess', null);
+      document.getElementById('overlayEditarVendedora').classList.add('open');
+    }
+
+    function fecharOverlayEq(id, e) {
+      if (e && e.target !== document.getElementById(id)) return;
+      document.getElementById(id).classList.remove('open');
+    }
+
+    function setEqMsg(id, msg, isOk = false) {
+      const el = document.getElementById(id);
+      el.textContent = msg ?? '';
+      el.className = 'eq-msg' + (msg ? (isOk ? ' ok visible' : ' err visible') : '');
+    }
+
+    async function criarVendedora() {
+      setEqMsg('nvError', null);
+      setEqMsg('nvSuccess', null);
+      const email = document.getElementById('nvEmail').value.trim();
+      const password = document.getElementById('nvSenha').value;
+      if (!email || !password) {
+        setEqMsg('nvError', 'Email e senha são obrigatórios.');
+        return;
+      }
+      const btn = document.getElementById('btnSalvarNovaVendedora');
+      btn.disabled = true; btn.textContent = 'Criando…';
+      try {
+        const res = await fetch('/cliente/equipe', {
+          method: 'POST', headers: authHeaders(session),
+          body: JSON.stringify({ email, password }),
+        });
+        const d = await res.json();
+        if (!res.ok) throw new Error(typeof d.error === 'string' ? d.error : Object.values(d.error ?? {}).flat().join('. '));
+        setEqMsg('nvSuccess', `Vendedora ${d.vendedora.email} criada!`, true);
+        await carregarEquipe();
+        setTimeout(() => fecharOverlayEq('overlayNovaVendedora'), 1100);
+      } catch (err) {
+        setEqMsg('nvError', err.message);
+      } finally {
+        btn.disabled = false; btn.textContent = 'Criar';
+      }
+    }
+
+    async function salvarVendedora() {
+      if (!vendedoraEditandoId) return;
+      setEqMsg('evError', null);
+      setEqMsg('evSuccess', null);
+      const email = document.getElementById('evEmail').value.trim() || undefined;
+      const password = document.getElementById('evSenha').value || undefined;
+      if (!email && !password) {
+        setEqMsg('evError', 'Informe email ou senha para atualizar.');
+        return;
+      }
+      const btn = document.getElementById('btnSalvarEditarVendedora');
+      btn.disabled = true; btn.textContent = 'Salvando…';
+      try {
+        const res = await fetch(`/cliente/equipe/${vendedoraEditandoId}`, {
+          method: 'PATCH', headers: authHeaders(session),
+          body: JSON.stringify({ email, password }),
+        });
+        const d = await res.json();
+        if (!res.ok) throw new Error(typeof d.error === 'string' ? d.error : Object.values(d.error ?? {}).flat().join('. '));
+        setEqMsg('evSuccess', 'Vendedora atualizada!', true);
+        await carregarEquipe();
+        setTimeout(() => fecharOverlayEq('overlayEditarVendedora'), 1000);
+      } catch (err) {
+        setEqMsg('evError', err.message);
+      } finally {
+        btn.disabled = false; btn.textContent = 'Salvar';
+      }
+    }
+
+    // ── Cupom ─────────────────────────────────────────────────────────────────
+    async function aplicarCupom() {
+      const el = document.getElementById('cupomResult');
+      el.className = 'cupom-result';
+      const codigo = document.getElementById('cupomCodigo').value.trim().toUpperCase();
+      if (!codigo) { el.className = 'cupom-result err'; el.textContent = 'Digite o código do cupom.'; return; }
+      const btn = document.getElementById('btnAplicarCupom');
+      btn.disabled = true; btn.textContent = 'Aplicando…';
+      try {
+        const res = await fetch('/cliente/cupom', {
+          method: 'POST', headers: authHeaders(session),
+          body: JSON.stringify({ codigo }),
+        });
+        const d = await res.json();
+        if (!res.ok) throw new Error(d.error ?? 'Cupom inválido');
+        const exp = new Date(d.expira_em).toLocaleDateString('pt-BR');
+        el.className = 'cupom-result ok';
+        el.textContent = `Cupom aplicado! +${d.creditos} créditos, acesso até ${exp}.`;
+        document.getElementById('cupomCodigo').value = '';
+        // Recarrega stats para refletir novos créditos
+        fetch('/cliente/stats', { headers: authHeaders(session) })
+          .then(r => r.ok ? r.json() : null)
+          .then(s => { if (s) { renderStats(s); statsData = s; } });
+      } catch (err) {
+        el.className = 'cupom-result err';
+        el.textContent = err.message;
+      } finally {
+        btn.disabled = false; btn.textContent = 'Aplicar';
+      }
+    }
+
+    // ── Init ─────────────────────────────────────────────────────────────────
+    (async () => {
+      session = await requireSession(['cliente']);
+      if (!session) return;
+
+      document.getElementById('userEmail').textContent = session.email ?? '';
+
+      try {
+        const res = await fetch('/cliente/stats', { headers: authHeaders(session) });
+        if (!res.ok) throw new Error('Erro ao carregar estatísticas');
+        statsData = await res.json();
+
+        renderStats(statsData);
+        renderCharts(statsData);
+        renderRanking(statsData.ranking_vendedoras);
+      } catch (err) {
+        showError(err.message);
+        document.getElementById('statsGrid').innerHTML =
+          '<div class="stat-card"><div class="empty">Erro ao carregar dados.</div></div>';
+        document.getElementById('chartsGrid').innerHTML = '';
+        document.getElementById('rankingCard').innerHTML = '';
+      }
+
+      loadHistory(currentPage);
+    })();
+  </script>
+</body>
+</html>
