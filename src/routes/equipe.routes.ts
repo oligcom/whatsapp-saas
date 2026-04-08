@@ -100,7 +100,7 @@ const updateSchema = z.object({
 router.patch("/cliente/equipe/:id", ...guard, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const workspaceId = req.user!.workspace_id;
-    const vendedoraId = req.params.id;
+    const vendedoraId = String(req.params.id);
     if (!workspaceId) { res.status(400).json({ error: "Workspace não encontrado" }); return; }
 
     const parsed = updateSchema.safeParse(req.body);
