@@ -228,6 +228,32 @@
     }
 
     .error-msg.visible { display: block; }
+
+    .rating-row {
+      display: none;
+      align-items: center;
+      gap: .6rem;
+      margin-top: .9rem;
+      padding-top: .75rem;
+      border-top: 1px solid #e8eaed;
+      flex-wrap: wrap;
+    }
+    .rating-row.visible { display: flex; }
+    .rating-label { font-size: .8rem; color: #888; }
+    .rating-btn {
+      padding: .35rem .75rem;
+      border: 1.5px solid #ddd;
+      border-radius: 20px;
+      background: #fff;
+      font-size: .88rem;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .rating-btn:hover:not(:disabled) { border-color: #25d366; background: #e9faf0; }
+    .rating-btn.selected { border-color: #25d366; background: #e9faf0; font-weight: 700; }
+    .rating-btn:disabled { opacity: .6; cursor: not-allowed; }
+    .rating-thanks { font-size: .82rem; color: #128c7e; font-weight: 600; display: none; }
+    .rating-thanks.visible { display: inline; }
   </style>
 </head>
 <body>
@@ -311,12 +337,19 @@
         </button>
       </div>
       <div class="mensagem-texto" id="mensagemTexto"></div>
+      <div class="rating-row" id="ratingRow">
+        <span class="rating-label">Avalie esta mensagem:</span>
+        <button class="rating-btn" id="ratingBom" onclick="avaliarMensagem(5)">👍 Boa</button>
+        <button class="rating-btn" id="ratingRuim" onclick="avaliarMensagem(1)">👎 Ruim</button>
+        <span class="rating-thanks" id="ratingThanks">Obrigado pelo feedback!</span>
+      </div>
     </div>
   </div>
 
   <script src="/auth.js"></script>
   <script>
     let session;
+    let mensagemAtualId = null;
 
     const form = document.getElementById('form');
     const btnGerar = document.getElementById('btnGerar');
@@ -383,6 +416,16 @@
         copiarLabel.textContent = 'Copiar';
         btnCopiar.classList.remove('copiado');
         resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        // Prepara avaliação
+        mensagemAtualId = data.mensagem_id ?? null;
+        const ratingRow = document.getElementById('ratingRow');
+        ratingRow.classList.add('visible');
+        document.getElementById('ratingThanks').classList.remove('visible');
+        document.getElementById('ratingBom').classList.remove('selected');
+        document.getElementById('ratingRuim').classList.remove('selected');
+        document.getElementById('ratingBom').disabled = false;
+        document.getElementById('ratingRuim').disabled = false;
       } catch (err) {
         errorMsg.textContent = err.message;
         errorMsg.classList.add('visible');
@@ -391,6 +434,24 @@
         btnGerar.disabled = false;
       }
     });
+
+    async function avaliarMensagem(rating) {
+      const bom  = document.getElementById('ratingBom');
+      const ruim = document.getElementById('ratingRuim');
+      bom.disabled = true;
+      ruim.disabled = true;
+      (rating === 5 ? bom : ruim).classList.add('selected');
+      document.getElementById('ratingThanks').classList.add('visible');
+      if (mensagemAtualId) {
+        try {
+          await fetch(`/mensagens/${mensagemAtualId}/avaliar`, {
+            method: 'POST',
+            headers: authHeaders(session),
+            body: JSON.stringify({ avaliacao: rating }),
+          });
+        } catch (e) { /* silencioso */ }
+      }
+    }
 
     btnCopiar.addEventListener('click', async () => {
       const texto = mensagemTexto.textContent;
