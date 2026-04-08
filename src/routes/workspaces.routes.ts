@@ -7,6 +7,8 @@ import {
   extrairDePDF,
   extrairDeURL,
 } from "../services/context/extractor.service";
+import { asaasService } from "../services/asaas.service";
+import { env } from "../config/env";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -83,6 +85,46 @@ router.post("/admin/workspaces", ...guard, async (req: Request, res: Response, n
       .single();
 
     if (error) { res.status(500).json({ error: "Erro ao criar workspace" }); return; }
+
+    // Integração Asaas: apenas se API key configurada e cnpj + email presentes
+    if (env.ASAAS_API_KEY && parsed.data.cnpj && parsed.data.email_contato) {
+      try {
+        const cliente = await asaasService.criarOuBuscarCliente({
+          name:     parsed.data.nome,
+          cpfCnpj:  parsed.data.cnpj,
+          email:    parsed.data.email_contato,
+          phone:    parsed.data.telefone   ?? undefined,
+          city:     parsed.data.cidade     ?? undefined,
+          state:    parsed.data.estado     ?? undefined,
+        });
+
+        const assinatura = await asaasService.criarAssinatura(
+          cliente.id,
+          `Plano Gerador - ${parsed.data.nome}`
+        );
+
+        const { data: updated, error: updateErr } = await supabase
+          .from("workspaces")
+          .update({
+            asaas_customer_id:     cliente.id,
+            asaas_subscription_id: assinatura.id,
+          })
+          .eq("id", data.id)
+          .select()
+          .single();
+
+        if (updateErr) throw updateErr;
+        res.status(201).json({ workspace: updated });
+        return;
+      } catch (asaasErr: unknown) {
+        // Rollback: remove o workspace criado para não deixar registro sem cobrança
+        await supabase.from("workspaces").delete().eq("id", data.id);
+        const msg = asaasErr instanceof Error ? asaasErr.message : "Erro desconhecido";
+        res.status(502).json({ error: `Erro ao configurar cobrança no Asaas: ${msg}` });
+        return;
+      }
+    }
+
     res.status(201).json({ workspace: data });
   } catch (err) { next(err); }
 });
