@@ -32,6 +32,7 @@ router.post("/auth/login", async (req: Request, res: Response, next: NextFunctio
       access_token: data.session.access_token,
       refresh_token: data.session.refresh_token,
       expires_at: data.session.expires_at,
+      email: data.user.email,
       role,
     });
   } catch (err) { next(err); }
@@ -58,6 +59,7 @@ router.post("/auth/refresh", async (req: Request, res: Response, next: NextFunct
       access_token: data.session.access_token,
       refresh_token: data.session.refresh_token,
       expires_at: data.session.expires_at,
+      email: data.user?.email,
       role,
     });
   } catch (err) { next(err); }

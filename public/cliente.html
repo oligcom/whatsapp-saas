@@ -1213,6 +1213,15 @@
       cobranca:    'Cobrança',
     };
 
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
     function showError(msg) {
       const el = document.getElementById('errorBanner');
       el.textContent = msg;
@@ -1399,7 +1408,7 @@
       const rows = ranking.map((v, i) => `
         <tr>
           <td><span class="rank-num ${rankClasses[i] ?? ''}">${i + 1}</span></td>
-          <td>${v.email}</td>
+          <td>${escapeHtml(v.email)}</td>
           <td><strong>${v.total}</strong></td>
         </tr>
       `).join('');
@@ -1445,12 +1454,12 @@
         const rows = data.mensagens.map(m => `
           <tr>
             <td style="white-space:nowrap;font-size:.78rem;color:#888">${fmtDate(m.created_at)}</td>
-            <td>${m.nome_cliente}</td>
-            <td style="font-size:.8rem;color:#888">${m.telefone ?? '—'}</td>
-            <td><span class="pill">${TIPO_LABELS[m.tipo_mensagem] ?? m.tipo_mensagem}</span></td>
-            <td><span class="pill ${m.tom}">${m.tom}</span></td>
-            <td><div class="msg-preview" title="${m.mensagem.replace(/"/g,'&quot;')}">${m.mensagem}</div></td>
-            <td style="font-size:.78rem;color:#aaa;white-space:nowrap">${m.usuario_email}</td>
+            <td>${escapeHtml(m.nome_cliente)}</td>
+            <td style="font-size:.8rem;color:#888">${m.telefone ? escapeHtml(m.telefone) : '—'}</td>
+            <td><span class="pill">${escapeHtml(TIPO_LABELS[m.tipo_mensagem] ?? m.tipo_mensagem)}</span></td>
+            <td><span class="pill ${escapeHtml(m.tom)}">${escapeHtml(m.tom)}</span></td>
+            <td><div class="msg-preview" title="${escapeHtml(m.mensagem)}">${escapeHtml(m.mensagem)}</div></td>
+            <td style="font-size:.78rem;color:#aaa;white-space:nowrap">${escapeHtml(m.usuario_email)}</td>
           </tr>
         `).join('');
 
@@ -1689,15 +1698,15 @@
         const inicial = (v.email?.[0] ?? '?').toUpperCase();
         return `
           <div class="vendedora-card">
-            <div class="vendedora-avatar">${inicial}</div>
+            <div class="vendedora-avatar">${escapeHtml(inicial)}</div>
             <div class="vendedora-info">
-              <div class="vendedora-email">${v.email}</div>
+              <div class="vendedora-email">${escapeHtml(v.email)}</div>
               <div class="vendedora-meta">
                 Cadastrada em ${fmtDateShort(v.created_at)}
                 ${v.last_sign_in_at ? ' · Último acesso: ' + fmtDateShort(v.last_sign_in_at) : ''}
               </div>
             </div>
-            <button class="btn-editar-vendedora" onclick="abrirEditarVendedora('${v.id}', '${v.email.replace(/'/g,"\\'")}')">Editar</button>
+            <button class="btn-editar-vendedora" onclick="abrirEditarVendedora(${JSON.stringify(v.id)}, ${JSON.stringify(v.email)})">Editar</button>
           </div>`;
       }).join('');
     }
