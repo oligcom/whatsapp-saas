@@ -16,6 +16,7 @@ import avaliacoesRoutes from "./routes/avaliacoes.routes";
 import indicacoesRoutes from "./routes/indicacoes.routes";
 import healthRoutes from "./routes/health.routes";
 import { errorHandler } from "./middlewares/errorHandler";
+import webhookRoutes from "./routes/webhook.routes";
 
 const app = express();
 
@@ -36,7 +37,7 @@ app.use("/", equipeRoutes);
 app.use("/", cupomRoutes);
 app.use("/", avaliacoesRoutes);
 app.use("/", indicacoesRoutes);
-
+app.use("/webhook", webhookRoutes);
 app.use((_req, res, next) => {
   // Prevent Express's default HTML 404 page on unmatched routes
   res.status(404).json({ error: "Rota não encontrada" });

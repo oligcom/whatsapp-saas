@@ -14,6 +14,9 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(3000),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   BASE_URL: z.string().url().optional(),
+
+  ASAAS_API_KEY: z.string().min(1).optional(),
+  ASAAS_BASE_URL: z.string().url().default("https://sandbox.asaas.com/api/v3"),
 });
 
 const parsed = envSchema.safeParse(process.env);
