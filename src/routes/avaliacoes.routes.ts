@@ -18,18 +18,34 @@ router.post(
       const mensagemId = String(req.params.id);
       const workspaceId = req.user!.workspace_id;
 
+      if (!workspaceId) {
+        res.status(400).json({ error: "Workspace não encontrado para este usuário" });
+        return;
+      }
+
       const parsed = ratingSchema.safeParse(req.body);
       if (!parsed.success) {
         res.status(400).json({ error: parsed.error.flatten().fieldErrors });
         return;
       }
 
-      // Garante que a mensagem pertence ao workspace do solicitante
+      // Garante que a mensagem pertence ao workspace do solicitante antes de atualizar
+      const { data: msg } = await supabase
+        .from("mensagens")
+        .select("id")
+        .eq("id", mensagemId)
+        .eq("workspace_id", workspaceId)
+        .maybeSingle();
+
+      if (!msg) {
+        res.status(404).json({ error: "Mensagem não encontrada" });
+        return;
+      }
+
       const { error } = await supabase
         .from("mensagens")
         .update({ avaliacao: parsed.data.avaliacao })
-        .eq("id", mensagemId)
-        .eq("workspace_id", workspaceId ?? "");
+        .eq("id", mensagemId);
 
       if (error) {
         res.status(500).json({ error: "Erro ao salvar avaliação" });

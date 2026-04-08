@@ -50,16 +50,18 @@ router.post("/admin/cupons", ...adminGuard, async (req: Request, res: Response, 
 
 router.delete("/admin/cupons/:id", ...adminGuard, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { data: cupom } = await supabase
+    const { data: cupom, error: selectErr } = await supabase
       .from("cupons")
       .select("usado")
       .eq("id", req.params.id)
-      .single();
+      .maybeSingle();
 
+    if (selectErr) { res.status(500).json({ error: "Erro ao buscar cupom" }); return; }
     if (!cupom) { res.status(404).json({ error: "Cupom não encontrado" }); return; }
     if (cupom.usado) { res.status(400).json({ error: "Não é possível excluir um cupom já utilizado" }); return; }
 
-    await supabase.from("cupons").delete().eq("id", req.params.id);
+    const { error: deleteErr } = await supabase.from("cupons").delete().eq("id", req.params.id);
+    if (deleteErr) { res.status(500).json({ error: "Erro ao excluir cupom" }); return; }
     res.json({ ok: true });
   } catch (err) { next(err); }
 });
@@ -73,8 +75,9 @@ router.post("/cliente/cupom", requireAuth, requireRole("cliente"), async (req: R
     const workspaceId = req.user!.workspace_id;
     if (!workspaceId) { res.status(400).json({ error: "Workspace não encontrado" }); return; }
 
-    const codigo = String(req.body.codigo ?? "").toUpperCase().trim();
-    if (!codigo) { res.status(400).json({ error: "Código do cupom é obrigatório" }); return; }
+    const codigoRaw = z.string().min(3).max(30).safeParse(req.body.codigo);
+    if (!codigoRaw.success) { res.status(400).json({ error: "Código do cupom inválido" }); return; }
+    const codigo = codigoRaw.data.toUpperCase().trim();
 
     // Busca cupom válido (não usado)
     const { data: cupom, error: cupomErr } = await supabase

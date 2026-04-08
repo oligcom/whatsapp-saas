@@ -11,7 +11,7 @@ const bodySchema = z.object({
   produto:       z.string().min(1),
   contexto:      z.string().min(1),
   tom:           z.enum(["formal", "casual", "amigavel"]).default("amigavel"),
-  tipo_mensagem: z.string().default("geral"),
+  tipo_mensagem: z.enum(["geral", "pos_compra", "reativacao", "promocao", "aniversario", "novidade", "cobranca"]).default("geral"),
   telefone:      z.string().optional().nullable(),
 });
 

@@ -20,6 +20,12 @@ const workspaceSchema = z.object({
   contexto_marca: z.string().min(1),
   logo_url: z.string().url().or(z.literal("")).optional(),
   limite_mensagens_mes: z.coerce.number().int().min(1).max(100_000).default(30),
+  cnpj:          z.string().max(20).optional().nullable(),
+  email_contato: z.string().email().or(z.literal("")).optional().nullable(),
+  telefone:      z.string().max(20).optional().nullable(),
+  responsavel:   z.string().max(150).optional().nullable(),
+  cidade:        z.string().max(100).optional().nullable(),
+  estado:        z.string().max(2).optional().nullable(),
 });
 
 // ── CRUD ─────────────────────────────────────────────────────────────────────

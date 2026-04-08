@@ -349,6 +349,39 @@
       <label>Segmento *</label>
       <input type="text" id="wsSegmento" placeholder="Ex: Moda feminina, calçados, acessórios..." />
     </div>
+
+    <!-- Dados da empresa -->
+    <div style="margin:.25rem 0 .6rem;font-size:.72rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.04em">Dados da empresa</div>
+    <div class="field">
+      <label>CNPJ</label>
+      <input type="text" id="wsCnpj" placeholder="00.000.000/0000-00" oninput="mascaraCNPJAdmin(this)" />
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+      <div class="field">
+        <label>E-mail de contato</label>
+        <input type="email" id="wsEmailContato" placeholder="contato@loja.com" />
+      </div>
+      <div class="field">
+        <label>Telefone</label>
+        <input type="text" id="wsTelefone" placeholder="(11) 99999-9999" oninput="mascaraTelefoneAdmin(this)" />
+      </div>
+    </div>
+    <div class="field">
+      <label>Nome do responsável</label>
+      <input type="text" id="wsResponsavel" placeholder="Ex: Maria Silva" />
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 80px;gap:.75rem">
+      <div class="field">
+        <label>Cidade</label>
+        <input type="text" id="wsCidade" placeholder="Ex: São Paulo" />
+      </div>
+      <div class="field">
+        <label>Estado (UF)</label>
+        <input type="text" id="wsEstado" placeholder="SP" maxlength="2" style="text-transform:uppercase" />
+      </div>
+    </div>
+
+    <div style="margin:.25rem 0 .6rem;font-size:.72rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.04em">Configuração</div>
     <div class="field">
       <label>URL do logo <span style="font-weight:400;color:#999">(opcional)</span></label>
       <input type="url" id="wsLogoUrl" placeholder="https://..." />
@@ -647,6 +680,12 @@ function renderWorkspaces() {
           <span style="padding:.18rem .5rem;border-radius:20px;font-size:.7rem;font-weight:700;background:${cor}22;color:${cor};border:1px solid ${cor}44">${statusLabel[status] ?? status}</span>
         </div>
         <div class="ws-contexto">${ctxPreview || "<em>Sem contexto</em>"}</div>
+        ${ws.responsavel || ws.email_contato || ws.cnpj ? `
+        <div style="font-size:.75rem;color:#666;border-top:1px solid #f0f2f5;padding-top:.55rem;display:flex;flex-direction:column;gap:.18rem">
+          ${ws.responsavel ? `<span>👤 ${esc(ws.responsavel)}</span>` : ""}
+          ${ws.email_contato ? `<span>✉️ ${esc(ws.email_contato)}</span>` : ""}
+          ${ws.cnpj ? `<span>🏢 ${esc(ws.cnpj)}</span>` : ""}
+        </div>` : ""}
         <div class="ws-meta">
           <div>
             <span class="ws-limite"><strong>${ws.limite_mensagens_mes?.toLocaleString("pt-BR")}</strong> msgs/mês</span>
@@ -707,6 +746,12 @@ function abrirModalWs(wsId = null) {
   if (ws) {
     document.getElementById("wsNome").value = ws.nome ?? "";
     document.getElementById("wsSegmento").value = ws.segmento ?? "";
+    document.getElementById("wsCnpj").value = ws.cnpj ?? "";
+    document.getElementById("wsEmailContato").value = ws.email_contato ?? "";
+    document.getElementById("wsTelefone").value = ws.telefone ?? "";
+    document.getElementById("wsResponsavel").value = ws.responsavel ?? "";
+    document.getElementById("wsCidade").value = ws.cidade ?? "";
+    document.getElementById("wsEstado").value = ws.estado ?? "";
     document.getElementById("wsLogoUrl").value = ws.logo_url ?? "";
     document.getElementById("wsLimite").value = ws.limite_mensagens_mes ?? 100;
     document.getElementById("wsContexto").value = ws.contexto_marca ?? "";
@@ -721,7 +766,7 @@ function fecharModalWs(e) {
 }
 
 function resetFormWs() {
-  ["wsNome","wsSegmento","wsLogoUrl","wsContexto","wsUrl"].forEach(id => {
+  ["wsNome","wsSegmento","wsCnpj","wsEmailContato","wsTelefone","wsResponsavel","wsCidade","wsEstado","wsLogoUrl","wsContexto","wsUrl"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = "";
   });
@@ -747,6 +792,9 @@ async function salvarWs() {
   const nome = v("wsNome"), segmento = v("wsSegmento");
   const logo_url = v("wsLogoUrl"), limite = v("wsLimite");
   const contexto_marca = v("wsContexto");
+  const cnpj = v("wsCnpj"), email_contato = v("wsEmailContato");
+  const telefone = v("wsTelefone"), responsavel = v("wsResponsavel");
+  const cidade = v("wsCidade"), estado = v("wsEstado");
 
   if (!nome || !segmento || !contexto_marca) {
     setError("wsError", "Nome, segmento e contexto são obrigatórios.");
@@ -757,7 +805,17 @@ async function salvarWs() {
   btn.disabled = true;
   btn.textContent = "Salvando…";
 
-  const body = { nome, segmento, contexto_marca, logo_url: logo_url || undefined, limite_mensagens_mes: Number(limite) || 100 };
+  const body = {
+    nome, segmento, contexto_marca,
+    logo_url: logo_url || undefined,
+    limite_mensagens_mes: Number(limite) || 100,
+    cnpj: cnpj || null,
+    email_contato: email_contato || null,
+    telefone: telefone || null,
+    responsavel: responsavel || null,
+    cidade: cidade || null,
+    estado: estado ? estado.toUpperCase() : null,
+  };
   const url = editingWsId ? `/admin/workspaces/${editingWsId}` : "/admin/workspaces";
   const method = editingWsId ? "PUT" : "POST";
 
@@ -896,6 +954,23 @@ async function criarUsuario() {
     btn.disabled = false;
     btn.textContent = "Criar";
   }
+}
+
+// ── Máscaras ─────────────────────────────────────────────────────────────────
+function mascaraCNPJAdmin(input) {
+  let v = input.value.replace(/\D/g, '').slice(0, 14);
+  if (v.length > 12) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+  else if (v.length > 8) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d+)$/, '$1.$2.$3/$4');
+  else if (v.length > 5) v = v.replace(/^(\d{2})(\d{3})(\d+)$/, '$1.$2.$3');
+  else if (v.length > 2) v = v.replace(/^(\d{2})(\d+)$/, '$1.$2');
+  input.value = v;
+}
+function mascaraTelefoneAdmin(input) {
+  let v = input.value.replace(/\D/g, '').slice(0, 11);
+  if (v.length > 10) v = v.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
+  else if (v.length > 6) v = v.replace(/^(\d{2})(\d{4})(\d+)$/, '($1) $2-$3');
+  else if (v.length > 2) v = v.replace(/^(\d{2})(\d+)$/, '($1) $2');
+  input.value = v;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

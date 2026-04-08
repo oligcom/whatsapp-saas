@@ -835,6 +835,104 @@
     .expired-banner.visible { display: block; }
     .expired-banner h3 { color: #b91c1c; font-size: .95rem; margin-bottom: .35rem; }
     .expired-banner p { font-size: .84rem; color: #666; }
+
+    /* ── Onboarding popup ── */
+    .onb-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.55);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200; padding: 1rem;
+      opacity: 0; pointer-events: none; transition: opacity .25s;
+    }
+    .onb-overlay.open { opacity: 1; pointer-events: all; }
+
+    .onb-modal {
+      background: #fff; border-radius: 18px;
+      width: 100%; max-width: 540px;
+      max-height: 92vh; overflow-y: auto;
+      padding: 2rem 2rem 1.5rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,.22);
+      transform: translateY(16px); transition: transform .25s;
+    }
+    .onb-overlay.open .onb-modal { transform: translateY(0); }
+
+    .onb-header { text-align: center; margin-bottom: 1.75rem; }
+    .onb-header h2 { font-size: 1.15rem; font-weight: 800; color: #128c7e; margin-bottom: .35rem; }
+    .onb-header p { font-size: .84rem; color: #888; }
+
+    .onb-steps {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0; margin-bottom: 1.75rem;
+    }
+    .onb-step-dot {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .8rem; font-weight: 700;
+      background: #e8eaed; color: #888;
+      transition: background .2s, color .2s;
+    }
+    .onb-step-dot.active { background: #25d366; color: #fff; }
+    .onb-step-dot.done { background: #128c7e; color: #fff; }
+    .onb-step-line { width: 48px; height: 2px; background: #e8eaed; margin: 0 4px; }
+    .onb-step-line.done { background: #128c7e; }
+
+    .onb-pane { display: none; }
+    .onb-pane.active { display: block; }
+
+    .onb-field { margin-bottom: .9rem; }
+    .onb-field label {
+      display: block; font-size: .78rem; font-weight: 600;
+      color: #444; margin-bottom: .3rem;
+    }
+    .onb-field input, .onb-field textarea, .onb-field select {
+      width: 100%; padding: .6rem .75rem;
+      border: 1.5px solid #ddd; border-radius: 8px;
+      font-size: .92rem; font-family: inherit;
+      color: #222; background: #fafafa; transition: border-color .15s;
+    }
+    .onb-field input:focus, .onb-field textarea:focus {
+      outline: none; border-color: #25d366; background: #fff;
+    }
+    .onb-field textarea { resize: vertical; min-height: 140px; }
+
+    .onb-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+    .onb-grid-estado { display: grid; grid-template-columns: 1fr 88px; gap: .75rem; }
+
+    .onb-hint-box {
+      background: #f0fdf4; border: 1.5px solid #86efac;
+      border-radius: 10px; padding: .8rem 1rem;
+      font-size: .82rem; color: #166534;
+      margin-bottom: 1.1rem; line-height: 1.5;
+    }
+
+    .onb-error {
+      font-size: .82rem; color: #b91c1c;
+      background: #fff0f0; border: 1.5px solid #fca5a5;
+      border-radius: 8px; padding: .5rem .8rem;
+      margin-top: .6rem; display: none;
+    }
+    .onb-error.visible { display: block; }
+
+    .onb-footer { display: flex; gap: .75rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #f0f2f5; }
+    .onb-btn-primary {
+      flex: 1; padding: .7rem; border: none; border-radius: 10px;
+      background: #25d366; color: #fff; font-size: .95rem; font-weight: 700;
+      cursor: pointer; transition: background .15s, opacity .15s;
+    }
+    .onb-btn-primary:hover { background: #1da851; }
+    .onb-btn-primary:disabled { opacity: .6; cursor: not-allowed; }
+    .onb-btn-secondary {
+      padding: .7rem 1.1rem; border: 1.5px solid #ddd; border-radius: 10px;
+      background: #fff; font-size: .9rem; font-weight: 600; color: #555;
+      cursor: pointer; transition: all .15s; white-space: nowrap;
+    }
+    .onb-btn-secondary:hover { border-color: #888; color: #333; }
+
+    .onb-section-label {
+      font-size: .72rem; font-weight: 700; color: #999;
+      text-transform: uppercase; letter-spacing: .05em;
+      margin: 1.1rem 0 .6rem;
+    }
   </style>
 </head>
 <body>
@@ -1720,12 +1818,131 @@
       }
     }
 
+    // ── Onboarding ────────────────────────────────────────────────────────────
+    let onbStep = 1;
+
+    function mascaraCNPJ(input) {
+      let v = input.value.replace(/\D/g, '').slice(0, 14);
+      if (v.length > 12) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+      else if (v.length > 8) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d+)$/, '$1.$2.$3/$4');
+      else if (v.length > 5) v = v.replace(/^(\d{2})(\d{3})(\d+)$/, '$1.$2.$3');
+      else if (v.length > 2) v = v.replace(/^(\d{2})(\d+)$/, '$1.$2');
+      input.value = v;
+    }
+
+    function mascaraTelefone(input) {
+      let v = input.value.replace(/\D/g, '').slice(0, 11);
+      if (v.length > 10) v = v.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
+      else if (v.length > 6) v = v.replace(/^(\d{2})(\d{4})(\d+)$/, '($1) $2-$3');
+      else if (v.length > 2) v = v.replace(/^(\d{2})(\d+)$/, '($1) $2');
+      input.value = v;
+    }
+
+    function onbSetError(id, msg) {
+      const el = document.getElementById(id);
+      el.textContent = msg ?? '';
+      el.classList.toggle('visible', !!msg);
+    }
+
+    function onbIrPara(step) {
+      onbStep = step;
+      [1, 2].forEach(s => {
+        document.getElementById(`onbPane${s}`).classList.toggle('active', s === step);
+        const dot = document.getElementById(`onbDot${s}`);
+        dot.classList.toggle('active', s === step);
+        dot.classList.toggle('done', s < step);
+      });
+      document.getElementById('onbLine1').classList.toggle('done', step > 1);
+    }
+
+    function onbProximo() {
+      const nome = document.getElementById('onbNome').value.trim();
+      const segmento = document.getElementById('onbSegmento').value.trim();
+      if (!nome || !segmento) {
+        onbSetError('onbError1', 'Nome da loja e segmento são obrigatórios.');
+        return;
+      }
+      onbSetError('onbError1', null);
+      onbIrPara(2);
+    }
+
+    function onbVoltar() { onbIrPara(1); }
+
+    async function onbSalvar() {
+      const contexto = document.getElementById('onbContexto').value.trim();
+      if (!contexto || contexto.length < 10) {
+        onbSetError('onbError2', 'Descreva o contexto da sua marca (mínimo 10 caracteres).');
+        return;
+      }
+      onbSetError('onbError2', null);
+
+      const btn = document.getElementById('onbBtnSalvar');
+      btn.disabled = true; btn.textContent = 'Salvando…';
+
+      try {
+        const body = {
+          nome:          document.getElementById('onbNome').value.trim(),
+          segmento:      document.getElementById('onbSegmento').value.trim(),
+          cnpj:          document.getElementById('onbCnpj').value.trim() || null,
+          email_contato: document.getElementById('onbEmailContato').value.trim() || null,
+          telefone:      document.getElementById('onbTelefone').value.trim() || null,
+          responsavel:   document.getElementById('onbResponsavel').value.trim() || null,
+          cidade:        document.getElementById('onbCidade').value.trim() || null,
+          estado:        document.getElementById('onbEstado').value.trim().toUpperCase() || null,
+          contexto_marca: contexto,
+        };
+
+        const res = await fetch('/cliente/workspace', {
+          method: 'PATCH',
+          headers: authHeaders(session),
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+          const d = await res.json();
+          throw new Error(d.error ?? 'Erro ao salvar');
+        }
+
+        document.getElementById('overlayOnboarding').classList.remove('open');
+      } catch (err) {
+        onbSetError('onbError2', err.message);
+      } finally {
+        btn.disabled = false; btn.textContent = 'Salvar e começar';
+      }
+    }
+
+    async function verificarOnboarding() {
+      try {
+        const res = await fetch('/cliente/workspace', { headers: authHeaders(session) });
+        if (!res.ok) return;
+        const { workspace } = await res.json();
+        const incompleto = !workspace.responsavel || !workspace.cnpj || !workspace.email_contato;
+        if (!incompleto) return;
+
+        // Pré-preenche com dados existentes
+        document.getElementById('onbNome').value = workspace.nome ?? '';
+        document.getElementById('onbSegmento').value = workspace.segmento ?? '';
+        document.getElementById('onbCnpj').value = workspace.cnpj ?? '';
+        document.getElementById('onbEmailContato').value = workspace.email_contato ?? '';
+        document.getElementById('onbTelefone').value = workspace.telefone ?? '';
+        document.getElementById('onbResponsavel').value = workspace.responsavel ?? '';
+        document.getElementById('onbCidade').value = workspace.cidade ?? '';
+        document.getElementById('onbEstado').value = workspace.estado ?? '';
+        document.getElementById('onbContexto').value = workspace.contexto_marca ?? '';
+
+        onbIrPara(1);
+        document.getElementById('overlayOnboarding').classList.add('open');
+      } catch (e) { /* silencioso */ }
+    }
+
     // ── Init ─────────────────────────────────────────────────────────────────
     (async () => {
       session = await requireSession(['cliente']);
       if (!session) return;
 
       document.getElementById('userEmail').textContent = session.email ?? '';
+
+      await verificarOnboarding();
 
       try {
         const res = await fetch('/cliente/stats', { headers: authHeaders(session) });
@@ -1746,5 +1963,99 @@
       loadHistory(currentPage);
     })();
   </script>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       Popup de Onboarding (cadastro incompleto)
+  ════════════════════════════════════════════════════════════ -->
+  <div id="overlayOnboarding" class="onb-overlay">
+    <div class="onb-modal">
+
+      <div class="onb-header">
+        <h2>Complete o cadastro da sua loja</h2>
+        <p>Precisamos de algumas informações para personalizar sua experiência com a IA.</p>
+      </div>
+
+      <!-- Indicador de etapas -->
+      <div class="onb-steps">
+        <div class="onb-step-dot active" id="onbDot1">1</div>
+        <div class="onb-step-line" id="onbLine1"></div>
+        <div class="onb-step-dot" id="onbDot2">2</div>
+      </div>
+
+      <!-- Etapa 1: Dados da empresa -->
+      <div class="onb-pane active" id="onbPane1">
+        <div class="onb-grid2">
+          <div class="onb-field">
+            <label>Nome da loja *</label>
+            <input id="onbNome" type="text" placeholder="Ex: Boutique da Maria" />
+          </div>
+          <div class="onb-field">
+            <label>Segmento *</label>
+            <input id="onbSegmento" type="text" placeholder="Ex: Moda feminina" />
+          </div>
+        </div>
+
+        <div class="onb-section-label">Dados da empresa</div>
+
+        <div class="onb-field">
+          <label>CNPJ</label>
+          <input id="onbCnpj" type="text" placeholder="00.000.000/0000-00" oninput="mascaraCNPJ(this)" inputmode="numeric" />
+        </div>
+
+        <div class="onb-grid2">
+          <div class="onb-field">
+            <label>E-mail de contato</label>
+            <input id="onbEmailContato" type="email" placeholder="contato@loja.com" />
+          </div>
+          <div class="onb-field">
+            <label>Telefone</label>
+            <input id="onbTelefone" type="tel" placeholder="(11) 99999-9999" oninput="mascaraTelefone(this)" />
+          </div>
+        </div>
+
+        <div class="onb-field">
+          <label>Nome do responsável</label>
+          <input id="onbResponsavel" type="text" placeholder="Ex: Maria Silva" />
+        </div>
+
+        <div class="onb-grid-estado">
+          <div class="onb-field">
+            <label>Cidade</label>
+            <input id="onbCidade" type="text" placeholder="Ex: São Paulo" />
+          </div>
+          <div class="onb-field">
+            <label>Estado (UF)</label>
+            <input id="onbEstado" type="text" placeholder="SP" maxlength="2" style="text-transform:uppercase" />
+          </div>
+        </div>
+
+        <div id="onbError1" class="onb-error"></div>
+
+        <div class="onb-footer" style="border-top:none;padding-top:0">
+          <button class="onb-btn-primary" onclick="onbProximo()">Próximo →</button>
+        </div>
+      </div>
+
+      <!-- Etapa 2: Sobre a loja -->
+      <div class="onb-pane" id="onbPane2">
+        <div class="onb-hint-box">
+          Descreva o estilo da sua loja, público-alvo, tom de comunicação e diferenciais. Isso ajuda a IA a gerar mensagens mais precisas.
+        </div>
+
+        <div class="onb-field">
+          <label>Contexto da marca *</label>
+          <textarea id="onbContexto" rows="8" placeholder="Ex: Loja de moda feminina focada em mulheres de 25 a 45 anos. Nosso tom é descontraído mas profissional. Diferenciais: atendimento personalizado, pronta-entrega e variedade de tamanhos..."></textarea>
+        </div>
+
+        <div id="onbError2" class="onb-error"></div>
+
+        <div class="onb-footer">
+          <button class="onb-btn-secondary" onclick="onbVoltar()">← Voltar</button>
+          <button class="onb-btn-primary" id="onbBtnSalvar" onclick="onbSalvar()">Salvar e começar</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
 </body>
 </html>

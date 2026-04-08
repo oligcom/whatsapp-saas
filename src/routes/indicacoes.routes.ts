@@ -214,19 +214,21 @@ router.patch(
         return;
       }
 
-      // Credita +50 mensagens ao workspace indicante
+      // Credita +50 mensagens ao workspace indicante (se ainda existir)
       const { data: wsIndicante } = await supabase
         .from("workspaces")
         .select("limite_mensagens_mes")
         .eq("id", sol.workspace_indicante_id)
-        .single();
+        .maybeSingle();
 
-      await supabase
-        .from("workspaces")
-        .update({
-          limite_mensagens_mes: (wsIndicante?.limite_mensagens_mes ?? 0) + 50,
-        })
-        .eq("id", sol.workspace_indicante_id);
+      if (wsIndicante) {
+        await supabase
+          .from("workspaces")
+          .update({
+            limite_mensagens_mes: wsIndicante.limite_mensagens_mes + 50,
+          })
+          .eq("id", sol.workspace_indicante_id);
+      }
 
       // Atualiza solicitação como aprovada
       await supabase

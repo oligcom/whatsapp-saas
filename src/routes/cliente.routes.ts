@@ -1,4 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
+import { z } from "zod";
 import { supabase } from "../config/supabase";
 import { requireAuth, requireRole } from "../middlewares/auth.middleware";
 
@@ -139,6 +140,56 @@ router.get("/cliente/mensagens", ...guard, async (req: Request, res: Response, n
   } catch (err) {
     next(err);
   }
+});
+
+// ── Workspace do cliente (onboarding) ────────────────────────────────────────
+
+router.get("/cliente/workspace", ...guard, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const workspaceId = req.user!.workspace_id;
+    if (!workspaceId) { res.status(400).json({ error: "Sem workspace" }); return; }
+
+    const { data, error } = await supabase
+      .from("workspaces")
+      .select("id, nome, segmento, contexto_marca, cnpj, email_contato, telefone, responsavel, cidade, estado")
+      .eq("id", workspaceId)
+      .single();
+
+    if (error || !data) { res.status(404).json({ error: "Workspace não encontrado" }); return; }
+    res.json({ workspace: data });
+  } catch (err) { next(err); }
+});
+
+const onboardingSchema = z.object({
+  nome:          z.string().min(1).max(100).optional(),
+  segmento:      z.string().min(1).max(100).optional(),
+  cnpj:          z.string().max(20).optional().nullable(),
+  email_contato: z.string().email().or(z.literal("")).optional().nullable(),
+  telefone:      z.string().max(20).optional().nullable(),
+  responsavel:   z.string().max(150).optional().nullable(),
+  cidade:        z.string().max(100).optional().nullable(),
+  estado:        z.string().max(2).optional().nullable(),
+  contexto_marca: z.string().min(10).optional(),
+});
+
+router.patch("/cliente/workspace", ...guard, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const workspaceId = req.user!.workspace_id;
+    if (!workspaceId) { res.status(400).json({ error: "Sem workspace" }); return; }
+
+    const parsed = onboardingSchema.safeParse(req.body);
+    if (!parsed.success) { res.status(400).json({ error: parsed.error.flatten().fieldErrors }); return; }
+
+    const { data, error } = await supabase
+      .from("workspaces")
+      .update(parsed.data)
+      .eq("id", workspaceId)
+      .select()
+      .single();
+
+    if (error || !data) { res.status(500).json({ error: "Erro ao salvar workspace" }); return; }
+    res.json({ workspace: data });
+  } catch (err) { next(err); }
 });
 
 export default router;
