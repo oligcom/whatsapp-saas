@@ -758,6 +758,71 @@
     .cupom-result.ok { background: #f0fdf4; border: 1.5px solid #86efac; color: #166534; display: block; }
     .cupom-result.err { background: #fff0f0; border: 1.5px solid #fca5a5; color: #b91c1c; display: block; }
 
+    /* ── Avaliação de mensagem ── */
+    .rating-row {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      margin-top: .9rem;
+      padding-top: .75rem;
+      border-top: 1px solid #f0f2f5;
+      flex-wrap: wrap;
+    }
+    .rating-label { font-size: .8rem; color: #888; }
+    .rating-btn {
+      padding: .35rem .75rem;
+      border: 1.5px solid #ddd;
+      border-radius: 20px;
+      background: #fff;
+      font-size: .88rem;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .rating-btn:hover { border-color: #25d366; background: #e9faf0; }
+    .rating-btn.selected { border-color: #25d366; background: #e9faf0; font-weight: 700; }
+    .rating-thanks { font-size: .82rem; color: #128c7e; font-weight: 600; display: none; }
+    .rating-thanks.visible { display: inline; }
+
+    /* ── Indicação ── */
+    .indicacao-card {
+      background: linear-gradient(135deg, #e9faf0 0%, #f0fdf9 100%);
+      border: 1.5px solid #b2dfdb;
+      border-radius: 14px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .indicacao-titulo { font-size: .95rem; font-weight: 800; color: #128c7e; margin-bottom: .4rem; }
+    .indicacao-desc { font-size: .84rem; color: #555; line-height: 1.55; margin-bottom: 1rem; }
+    .indicacao-link-wrap { margin-bottom: 1rem; }
+    .indicacao-link-label { font-size: .75rem; font-weight: 600; color: #444; margin-bottom: .3rem; }
+    .indicacao-link-row { display: flex; gap: .5rem; }
+    .indicacao-link-input {
+      flex: 1;
+      padding: .5rem .75rem;
+      border: 1.5px solid #b2dfdb;
+      border-radius: 8px;
+      font-size: .8rem;
+      font-family: monospace;
+      background: #fff;
+      color: #333;
+    }
+    .btn-copiar-link {
+      padding: .5rem .9rem;
+      background: #128c7e;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: .82rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .15s;
+    }
+    .btn-copiar-link:hover { background: #0e6b62; }
+    .indicacao-stats { display: flex; gap: 1.25rem; flex-wrap: wrap; }
+    .indicacao-stat { font-size: .83rem; color: #555; }
+    .indicacao-stat strong { color: #128c7e; }
+
     /* ── Banner de acesso expirado ── */
     .expired-banner {
       background: #fff5f5;
@@ -806,7 +871,7 @@
     <div class="cli-tabs">
       <button class="cli-tab active" data-pane="dashboard" onclick="switchCliTab('dashboard')">Dashboard</button>
       <button class="cli-tab" data-pane="equipe" onclick="switchCliTab('equipe')">Minha Equipe</button>
-      <button class="cli-tab" data-pane="cupom" onclick="switchCliTab('cupom')">Cupom</button>
+      <button class="cli-tab" data-pane="cupom" onclick="switchCliTab('cupom')">Indicações e Cupons</button>
     </div>
   </div>
 
@@ -872,6 +937,28 @@
   <!-- ── Tab: Cupom ────────────────────────────────────────── -->
   <div id="cli-pane-cupom" class="cli-pane">
     <div class="main">
+
+      <!-- Seção de indicação -->
+      <div class="indicacao-card" id="indicacaoCard">
+        <div class="indicacao-titulo">Indique e Ganhe</div>
+        <div class="indicacao-desc">
+          Compartilhe seu link de indicação com outras lojas. Quando uma indicação for aprovada,
+          você ganha <strong>+50 créditos</strong> extras de mensagens!
+        </div>
+        <div class="indicacao-link-wrap" id="indicacaoLinkWrap" style="display:none">
+          <div class="indicacao-link-label">Seu link de indicação</div>
+          <div class="indicacao-link-row">
+            <input class="indicacao-link-input" id="indicacaoLinkInput" type="text" readonly />
+            <button class="btn-copiar-link" id="btnCopiarLink" onclick="copiarLinkIndicacao()">Copiar</button>
+          </div>
+        </div>
+        <div class="indicacao-stats" id="indicacaoStats" style="display:none">
+          <div class="indicacao-stat">Aprovadas: <strong id="indicacaoAprovadas">—</strong></div>
+          <div class="indicacao-stat">Pendentes: <strong id="indicacaoPendentes">—</strong></div>
+        </div>
+        <div id="indicacaoLoading" style="font-size:.82rem;color:#aaa">Carregando...</div>
+      </div>
+
       <div class="cupom-card">
         <div class="cupom-titulo">Inserir Cupom de Acesso</div>
         <div class="cupom-desc">
@@ -993,6 +1080,13 @@
           </button>
         </div>
         <div class="mensagem-texto" id="mensagemTexto"></div>
+        <!-- Avaliação -->
+        <div class="rating-row" id="ratingRow" style="display:none">
+          <span class="rating-label">Avalie esta mensagem:</span>
+          <button class="rating-btn" id="ratingBom" onclick="avaliarMensagem(5)">👍 Boa</button>
+          <button class="rating-btn" id="ratingRuim" onclick="avaliarMensagem(1)">👎 Ruim</button>
+          <span class="rating-thanks" id="ratingThanks">Obrigado pelo feedback!</span>
+        </div>
       </div>
 
       <div class="modal-footer">
@@ -1009,6 +1103,7 @@
     const PAGE_SIZE = 20;
     let equipeCarregada = false;
     let vendedoraEditandoId = null;
+    let mensagemAtualId = null;
 
     const TIPO_LABELS = {
       geral:       'Geral',
@@ -1046,6 +1141,14 @@
         btnHeader.title = limiteAtingido ? 'Limite mensal atingido' : '';
       }
 
+      const mediaCard = s.media_avaliacoes != null
+        ? `<div class="stat-card">
+            <div class="stat-label">Avaliação média</div>
+            <div class="stat-value" style="font-size:1.6rem">${s.media_avaliacoes.toFixed(1)} ⭐</div>
+            <div class="stat-sub">todas as mensagens avaliadas</div>
+          </div>`
+        : '';
+
       document.getElementById('statsGrid').innerHTML = `
         <div class="stat-card">
           <div class="stat-label">Mensagens hoje</div>
@@ -1070,7 +1173,57 @@
           <div class="stat-value" style="color:${limiteAtingido ? '#ef4444' : pct>=90 ? '#ef4444' : '#128c7e'}">${disponivel}</div>
           <div class="stat-sub">${limiteAtingido ? 'Limite atingido — contate o gestor' : 'mensagens restantes'}</div>
         </div>
+        ${mediaCard}
       `;
+    }
+
+    // ── Avaliação de mensagem ─────────────────────────────────────────────────
+    async function avaliarMensagem(rating) {
+      if (!mensagemAtualId) return;
+      document.getElementById('ratingBom').disabled = true;
+      document.getElementById('ratingRuim').disabled = true;
+      const btn = rating === 5
+        ? document.getElementById('ratingBom')
+        : document.getElementById('ratingRuim');
+      btn.classList.add('selected');
+      try {
+        await fetch(`/mensagens/${mensagemAtualId}/avaliar`, {
+          method: 'POST',
+          headers: authHeaders(session),
+          body: JSON.stringify({ avaliacao: rating }),
+        });
+      } catch (e) { /* silencioso */ }
+      document.getElementById('ratingThanks').classList.add('visible');
+    }
+
+    // ── Indicação ─────────────────────────────────────────────────────────────
+    async function carregarIndicacao() {
+      indicacaoCarregada = true;
+      try {
+        const res = await fetch('/cliente/indicacao', { headers: authHeaders(session) });
+        if (!res.ok) throw new Error();
+        const d = await res.json();
+        document.getElementById('indicacaoLoading').style.display = 'none';
+
+        if (d.codigo_indicacao) {
+          const link = `${location.origin}/indicacao.html?ref=${d.codigo_indicacao}`;
+          document.getElementById('indicacaoLinkInput').value = link;
+          document.getElementById('indicacaoLinkWrap').style.display = 'block';
+          document.getElementById('indicacaoAprovadas').textContent = d.total_aprovadas;
+          document.getElementById('indicacaoPendentes').textContent = d.total_pendentes;
+          document.getElementById('indicacaoStats').style.display = 'flex';
+        }
+      } catch (e) {
+        document.getElementById('indicacaoLoading').textContent = 'Não foi possível carregar os dados.';
+      }
+    }
+
+    function copiarLinkIndicacao() {
+      const val = document.getElementById('indicacaoLinkInput').value;
+      const btn = document.getElementById('btnCopiarLink');
+      navigator.clipboard.writeText(val).catch(() => {});
+      btn.textContent = 'Copiado!';
+      setTimeout(() => btn.textContent = 'Copiar', 2000);
     }
 
     // ── Gráficos ─────────────────────────────────────────────────────────────
@@ -1341,6 +1494,19 @@
         document.getElementById('copiarLabel').textContent = 'Copiar';
         document.getElementById('btnCopiar').classList.remove('copiado');
 
+        // Prepara avaliação
+        mensagemAtualId = data.mensagem_id ?? null;
+        const ratingRow = document.getElementById('ratingRow');
+        const ratingThanks = document.getElementById('ratingThanks');
+        const ratingBom = document.getElementById('ratingBom');
+        const ratingRuim = document.getElementById('ratingRuim');
+        ratingRow.style.display = mensagemAtualId ? 'flex' : 'none';
+        ratingThanks.classList.remove('visible');
+        ratingBom.classList.remove('selected');
+        ratingRuim.classList.remove('selected');
+        ratingBom.disabled = false;
+        ratingRuim.disabled = false;
+
         // Atualiza stats e histórico em background
         loadHistory(1);
         fetch('/cliente/stats', { headers: authHeaders(session) })
@@ -1376,6 +1542,7 @@
     }
 
     // ── Tabs ─────────────────────────────────────────────────────────────────
+    let indicacaoCarregada = false;
     function switchCliTab(pane) {
       document.querySelectorAll('.cli-tab').forEach(b =>
         b.classList.toggle('active', b.getAttribute('data-pane') === pane)
@@ -1383,6 +1550,7 @@
       document.querySelectorAll('.cli-pane').forEach(p => p.classList.remove('active'));
       document.getElementById(`cli-pane-${pane}`).classList.add('active');
       if (pane === 'equipe' && !equipeCarregada) carregarEquipe();
+      if (pane === 'cupom'  && !indicacaoCarregada) carregarIndicacao();
     }
 
     // ── Minha Equipe ─────────────────────────────────────────────────────────

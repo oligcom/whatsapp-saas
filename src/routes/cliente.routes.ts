@@ -20,7 +20,7 @@ router.get("/cliente/stats", ...guard, async (req: Request, res: Response, next:
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
     // Contagens diretas
-    const [{ count: hoje }, { count: mes }, wsResult, mensagensResult] = await Promise.all([
+    const [{ count: hoje }, { count: mes }, wsResult, mensagensResult, avaliacoesResult] = await Promise.all([
       supabase
         .from("mensagens")
         .select("*", { count: "exact", head: true })
@@ -41,9 +41,20 @@ router.get("/cliente/stats", ...guard, async (req: Request, res: Response, next:
         .select("usuario_id, tipo_mensagem, created_at")
         .eq("workspace_id", workspaceId)
         .gte("created_at", startOfMonth),
+      supabase
+        .from("mensagens")
+        .select("avaliacao")
+        .eq("workspace_id", workspaceId)
+        .not("avaliacao", "is", null),
     ]);
 
     const mensagens = mensagensResult.data ?? [];
+
+    // Média de avaliações (todas as mensagens com avaliação do workspace)
+    const avaliacoes = (avaliacoesResult.data ?? []).map((m) => m.avaliacao as number);
+    const media_avaliacoes = avaliacoes.length
+      ? Math.round((avaliacoes.reduce((a, b) => a + b, 0) / avaliacoes.length) * 10) / 10
+      : null;
 
     // Agregações via JS
     const rankingMap: Record<string, number> = {};
@@ -79,10 +90,11 @@ router.get("/cliente/stats", ...guard, async (req: Request, res: Response, next:
     res.json({
       hoje: hoje ?? 0,
       mes: mes ?? 0,
-      limite_mes: wsResult.data?.limite_mensagens_mes ?? 100,
+      limite_mes: wsResult.data?.limite_mensagens_mes ?? 30,
       ranking_vendedoras,
       pico_horas,
       tipos_mensagem,
+      media_avaliacoes,
     });
   } catch (err) {
     next(err);

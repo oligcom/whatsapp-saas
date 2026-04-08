@@ -273,6 +273,7 @@
     <button class="tab-btn active" data-tab="workspaces" onclick="switchTab('workspaces')">Workspaces</button>
     <button class="tab-btn" data-tab="usuarios" onclick="switchTab('usuarios')">Usuários</button>
     <button class="tab-btn" data-tab="cupons" onclick="switchTab('cupons')">Cupons</button>
+    <button class="tab-btn" data-tab="solicitacoes" onclick="switchTab('solicitacoes')">Solicitações</button>
   </div>
 
   <!-- Tab: Workspaces -->
@@ -298,6 +299,18 @@
     </div>
     <div class="card">
       <div id="usersTableWrap">
+        <div class="empty-state">Carregando...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Solicitações de Indicação -->
+  <div class="tab-content" id="tab-solicitacoes">
+    <div class="section-header">
+      <span class="section-title" id="solCount"></span>
+    </div>
+    <div class="card">
+      <div id="solicitacoesTableWrap">
         <div class="empty-state">Carregando...</div>
       </div>
     </div>
@@ -489,6 +502,29 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════
+     Modal Rejeitar Solicitação
+════════════════════════════════════════════════════════════ -->
+<div class="overlay" id="overlayRejeitar" onclick="fecharModalRejeitar(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">Rejeitar solicitação</div>
+    <input type="hidden" id="rejeitarSolId" />
+
+    <div class="field">
+      <label>Motivo da rejeição *</label>
+      <textarea id="rejeitarMotivo" rows="3" placeholder="Ex: CNPJ inválido, informações incompletas..."></textarea>
+    </div>
+
+    <div class="form-error" id="rejeitarError"></div>
+    <div class="form-success" id="rejeitarSuccess"></div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="fecharModalRejeitar()">Cancelar</button>
+      <button class="btn-save" id="btnConfirmarRejeitar" style="background:#ef4444" onclick="confirmarRejeitar()">Rejeitar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
      Modal Cupom
 ════════════════════════════════════════════════════════════ -->
 <div class="overlay" id="overlayCupom" onclick="fecharModalCupom(event)">
@@ -531,6 +567,7 @@ let ctxSource = "manual";   // manual | pdf | url
 let pdfFile = null;
 let activeTab = "workspaces";
 let cuponsCarregados = false;
+let solicitacoesCarregadas = false;
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 (async () => {
@@ -548,7 +585,8 @@ function switchTab(tab) {
   });
   document.querySelectorAll(".tab-content").forEach((c) => c.classList.remove("active"));
   document.getElementById(`tab-${tab}`).classList.add("active");
-  if (tab === "cupons" && !cuponsCarregados) carregarCupons();
+  if (tab === "cupons"       && !cuponsCarregados)       carregarCupons();
+  if (tab === "solicitacoes" && !solicitacoesCarregadas) carregarSolicitacoes();
 }
 
 // ── Load data ─────────────────────────────────────────────────────────────────
@@ -613,6 +651,7 @@ function renderWorkspaces() {
           <div>
             <span class="ws-limite"><strong>${ws.limite_mensagens_mes?.toLocaleString("pt-BR")}</strong> msgs/mês</span>
             <div>${expira}</div>
+            ${ws.media_avaliacoes != null ? `<span style="font-size:.72rem;color:#888">Avaliação: <strong>${ws.media_avaliacoes.toFixed(1)} ⭐</strong></span>` : ""}
           </div>
           <div style="display:flex;gap:.4rem">
             ${!isDemo ? `<button class="btn-edit" style="font-size:.72rem;border-color:#6366f1;color:#6366f1" onclick="marcarComoDemo('${esc(ws.id)}')">Demo</button>` : ""}
@@ -1089,6 +1128,112 @@ async function deletarCupom(id) {
     await carregarCupons();
   } catch (err) {
     alert("Erro: " + err.message);
+  }
+}
+
+// ── Solicitações de Indicação ─────────────────────────────────────────────────
+let solicitacoes = [];
+
+async function carregarSolicitacoes() {
+  solicitacoesCarregadas = true;
+  const res = await fetch("/admin/solicitacoes", { headers: authHeaders(session) });
+  if (!res.ok) return;
+  const d = await res.json();
+  solicitacoes = d.solicitacoes ?? [];
+  renderSolicitacoes();
+}
+
+function renderSolicitacoes() {
+  const wrap = document.getElementById("solicitacoesTableWrap");
+  const pendentes = solicitacoes.filter(s => s.status === "pendente").length;
+  document.getElementById("solCount").textContent =
+    `${solicitacoes.length} solicitaç${solicitacoes.length !== 1 ? "ões" : "ão"}` +
+    (pendentes ? ` · ${pendentes} pendente${pendentes > 1 ? "s" : ""}` : "");
+
+  if (!solicitacoes.length) {
+    wrap.innerHTML = `<div class="empty-state">Nenhuma solicitação recebida ainda.</div>`;
+    return;
+  }
+
+  const wsMap = Object.fromEntries(workspaces.map(w => [w.id, w.nome]));
+  const statusBadge = {
+    pendente:  `<span style="background:#fef9c3;color:#92400e;border:1px solid #fde68a;padding:.15rem .5rem;border-radius:20px;font-size:.72rem;font-weight:700">Pendente</span>`,
+    aprovado:  `<span style="background:#e9faf0;color:#128c7e;border:1px solid #b2dfdb;padding:.15rem .5rem;border-radius:20px;font-size:.72rem;font-weight:700">Aprovado</span>`,
+    rejeitado: `<span style="background:#fff0f0;color:#b91c1c;border:1px solid #fca5a5;padding:.15rem .5rem;border-radius:20px;font-size:.72rem;font-weight:700">Rejeitado</span>`,
+  };
+
+  const rows = solicitacoes.map(s => {
+    const acoes = s.status === "pendente"
+      ? `<button class="btn-edit" style="background:#e9faf0;border-color:#128c7e;color:#128c7e;font-size:.75rem" onclick="aprovarSolicitacao('${esc(s.id)}')">Aprovar</button>
+         <button class="btn-edit" style="background:#fff0f0;border-color:#ef4444;color:#ef4444;font-size:.75rem;margin-left:.3rem" onclick="abrirModalRejeitar('${esc(s.id)}')">Rejeitar</button>`
+      : s.status === "rejeitado"
+        ? `<span style="font-size:.75rem;color:#888" title="${esc(s.motivo_rejeicao ?? '')}">Motivo: ${esc((s.motivo_rejeicao ?? '').slice(0,40))}${(s.motivo_rejeicao?.length ?? 0) > 40 ? '…' : ''}</span>`
+        : `<span style="font-size:.75rem;color:#128c7e">WS criado</span>`;
+
+    return `<tr>
+      <td><strong>${esc(s.nome_loja)}</strong><div style="font-size:.75rem;color:#888">${esc(s.cnpj)}</div></td>
+      <td style="font-size:.82rem">${esc(s.email)}<div style="color:#aaa;font-size:.75rem">${esc(s.telefone ?? '—')}</div></td>
+      <td style="font-size:.82rem">${esc(wsMap[s.workspace_indicante_id] ?? s.workspace_indicante_id)}</td>
+      <td>${statusBadge[s.status] ?? s.status}</td>
+      <td style="white-space:nowrap;font-size:.78rem;color:#888">${fmtDate(s.created_at)}</td>
+      <td style="white-space:nowrap">${acoes}</td>
+    </tr>`;
+  }).join("");
+
+  wrap.innerHTML = `
+    <table>
+      <thead><tr><th>Loja / CNPJ</th><th>Contato</th><th>Indicante</th><th>Status</th><th>Data</th><th>Ações</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+async function aprovarSolicitacao(id) {
+  if (!confirm("Aprovar esta solicitação? Será criado um workspace com 7 dias de trial e 50 créditos, e o indicante ganhará +50 créditos.")) return;
+  try {
+    const res = await fetch(`/admin/solicitacoes/${id}/aprovar`, { method: "PATCH", headers: authHeaders(session) });
+    const d = await res.json();
+    if (!res.ok) throw new Error(flatError(d.error));
+    await Promise.all([carregarSolicitacoes(), carregarWorkspaces()]);
+  } catch (err) {
+    alert("Erro: " + err.message);
+  }
+}
+
+function abrirModalRejeitar(id) {
+  document.getElementById("rejeitarSolId").value = id;
+  document.getElementById("rejeitarMotivo").value = "";
+  setError("rejeitarError", null);
+  setSuccess("rejeitarSuccess", null);
+  document.getElementById("overlayRejeitar").classList.add("open");
+}
+
+function fecharModalRejeitar(e) {
+  if (e && e.target !== document.getElementById("overlayRejeitar")) return;
+  document.getElementById("overlayRejeitar").classList.remove("open");
+}
+
+async function confirmarRejeitar() {
+  const id     = document.getElementById("rejeitarSolId").value;
+  const motivo = (document.getElementById("rejeitarMotivo").value ?? "").trim();
+  if (!motivo) { setError("rejeitarError", "O motivo é obrigatório."); return; }
+
+  const btn = document.getElementById("btnConfirmarRejeitar");
+  btn.disabled = true; btn.textContent = "Rejeitando…";
+
+  try {
+    const res = await fetch(`/admin/solicitacoes/${id}/rejeitar`, {
+      method: "PATCH", headers: authHeaders(session),
+      body: JSON.stringify({ motivo }),
+    });
+    const d = await res.json();
+    if (!res.ok) throw new Error(flatError(d.error));
+    setSuccess("rejeitarSuccess", "Solicitação rejeitada.");
+    await carregarSolicitacoes();
+    setTimeout(() => document.getElementById("overlayRejeitar").classList.remove("open"), 900);
+  } catch (err) {
+    setError("rejeitarError", err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = "Rejeitar";
   }
 }
 

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cadastro via Indicação — Gerador WhatsApp</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem 3rem;
+    }
+
+    .wrap { width: 100%; max-width: 480px; }
+
+    /* ── Header ── */
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      justify-content: center;
+      margin-bottom: 2rem;
+    }
+    .brand-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #128c7e;
+      line-height: 1.2;
+    }
+    .brand-sub { font-size: .78rem; color: #888; }
+
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.09);
+      padding: 2rem;
+    }
+
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #222;
+      margin-bottom: .4rem;
+    }
+    .card-sub {
+      font-size: .88rem;
+      color: #666;
+      line-height: 1.55;
+      margin-bottom: 1.75rem;
+    }
+
+    .indicante-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      background: #e9faf0;
+      border: 1px solid #b2dfdb;
+      border-radius: 20px;
+      padding: .3rem .75rem;
+      font-size: .82rem;
+      font-weight: 700;
+      color: #128c7e;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ── Form ── */
+    .field { margin-bottom: 1rem; }
+    label {
+      display: block;
+      font-size: .78rem;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: .3rem;
+    }
+    input[type="text"], input[type="email"], input[type="tel"] {
+      width: 100%;
+      padding: .65rem .8rem;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      font-size: .92rem;
+      font-family: inherit;
+      color: #222;
+      background: #fafafa;
+      transition: border-color .15s;
+    }
+    input:focus { outline: none; border-color: #25d366; background: #fff; }
+
+    .hint { font-size: .75rem; color: #aaa; margin-top: .25rem; }
+
+    .btn-submit {
+      width: 100%;
+      padding: .75rem;
+      background: #25d366;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: .95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s, opacity .15s;
+      margin-top: .5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+    }
+    .btn-submit:hover { background: #1da851; }
+    .btn-submit:disabled { opacity: .6; cursor: not-allowed; }
+
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2.5px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+    .btn-submit.loading .spinner { display: block; }
+    .btn-submit.loading .lbl { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .msg-err {
+      margin-top: .9rem;
+      padding: .6rem .85rem;
+      background: #fff0f0;
+      border: 1.5px solid #fca5a5;
+      border-radius: 8px;
+      font-size: .83rem;
+      color: #b91c1c;
+      display: none;
+    }
+    .msg-err.visible { display: block; }
+
+    /* ── Estado de sucesso ── */
+    .success-state { display: none; text-align: center; padding: 1rem 0; }
+    .success-state.visible { display: block; }
+
+    .success-icon {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: #e9faf0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      margin: 0 auto 1.25rem;
+    }
+    .success-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #128c7e;
+      margin-bottom: .5rem;
+    }
+    .success-desc {
+      font-size: .88rem;
+      color: #666;
+      line-height: 1.55;
+    }
+
+    /* ── Estado de código inválido ── */
+    .invalid-state {
+      text-align: center;
+      padding: 1rem 0;
+      display: none;
+    }
+    .invalid-state.visible { display: block; }
+    .invalid-title { font-size: 1rem; font-weight: 700; color: #b91c1c; margin-bottom: .5rem; }
+    .invalid-desc { font-size: .85rem; color: #666; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Marca -->
+  <div class="brand">
+    <svg width="36" height="36" viewBox="0 0 38 38" fill="none">
+      <circle cx="19" cy="19" r="19" fill="#25d366"/>
+      <path d="M27.5 10.5A11.5 11.5 0 0 0 7.9 24.1L6.5 31.5l7.6-1.4A11.5 11.5 0 1 0 27.5 10.5zm-8.5 17a9.4 9.4 0 0 1-4.8-1.3l-.35-.2-3.6.66.68-3.5-.23-.36a9.5 9.5 0 1 1 8.3 4.7zm5.2-7.1c-.28-.14-1.67-.82-1.93-.91-.26-.1-.45-.14-.64.14-.19.28-.73.91-.9 1.1-.16.19-.33.21-.61.07a7.7 7.7 0 0 1-2.27-1.4 8.5 8.5 0 0 1-1.57-1.95c-.16-.28 0-.43.13-.57.13-.12.28-.33.42-.49.14-.17.19-.28.28-.47.1-.19.05-.36-.02-.5-.07-.14-.64-1.54-.88-2.1-.23-.55-.47-.48-.64-.49h-.55c-.19 0-.49.07-.75.35-.26.28-1 1-.97 2.43.02 1.43 1.05 2.82 1.2 3.01.14.19 2.07 3.16 5.02 4.43.7.3 1.25.48 1.68.62.7.22 1.34.19 1.85.11.56-.08 1.73-.71 1.97-1.39.24-.68.24-1.27.17-1.39-.07-.12-.26-.19-.55-.33z" fill="#fff"/>
+    </svg>
+    <div>
+      <div class="brand-title">Gerador de Mensagens WhatsApp</div>
+      <div class="brand-sub">Cadastro via indicação</div>
+    </div>
+  </div>
+
+  <!-- Card principal -->
+  <div class="card">
+
+    <!-- Estado: código inválido -->
+    <div class="invalid-state" id="invalidState">
+      <div class="invalid-title">Link inválido</div>
+      <div class="invalid-desc">Este link de indicação não existe ou expirou.<br>Solicite um novo link ao parceiro que te indicou.</div>
+    </div>
+
+    <!-- Estado: formulário -->
+    <div id="formState">
+      <div class="card-title">Cadastre sua loja</div>
+      <div class="card-sub" id="cardSub">
+        Você foi indicado para usar o Gerador de Mensagens WhatsApp.
+        Preencha os dados abaixo e nossa equipe entrará em contato.
+      </div>
+
+      <div id="indicanteBadge" style="display:none" class="indicante-badge">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Indicado por: <span id="indicanteNome"></span>
+      </div>
+
+      <div class="field">
+        <label>Nome da loja *</label>
+        <input type="text" id="nomeLoja" placeholder="Ex: Boutique da Maria" />
+      </div>
+      <div class="field">
+        <label>CNPJ *</label>
+        <input type="text" id="cnpj" placeholder="00.000.000/0001-00" maxlength="18" oninput="mascaraCNPJ(this)" />
+      </div>
+      <div class="field">
+        <label>Email de contato *</label>
+        <input type="email" id="email" placeholder="contato@loja.com" />
+      </div>
+      <div class="field">
+        <label>Telefone / WhatsApp <span style="font-weight:400;color:#aaa">(opcional)</span></label>
+        <input type="tel" id="telefone" placeholder="(11) 99999-9999" />
+      </div>
+
+      <button class="btn-submit" id="btnSubmit" onclick="enviarSolicitacao()">
+        <div class="spinner"></div>
+        <span class="lbl">Enviar solicitação</span>
+      </button>
+
+      <div class="msg-err" id="msgErr"></div>
+    </div>
+
+    <!-- Estado: sucesso -->
+    <div class="success-state" id="successState">
+      <div class="success-icon">✅</div>
+      <div class="success-title">Solicitação enviada!</div>
+      <div class="success-desc">
+        Recebemos seu cadastro e nossa equipe irá analisar em breve.<br><br>
+        Você receberá um retorno no email <strong id="emailConfirm"></strong>.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let codigoIndicante = null;
+
+  // ── Máscara CNPJ ───────────────────────────────────────────────────────────
+  function mascaraCNPJ(input) {
+    let v = input.value.replace(/\D/g, '').slice(0, 14);
+    if (v.length > 12) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+    else if (v.length > 8) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d+)$/, '$1.$2.$3/$4');
+    else if (v.length > 5) v = v.replace(/^(\d{2})(\d{3})(\d+)$/, '$1.$2.$3');
+    else if (v.length > 2) v = v.replace(/^(\d{2})(\d+)$/, '$1.$2');
+    input.value = v;
+  }
+
+  // ── Init: lê ?ref= da URL ──────────────────────────────────────────────────
+  (async () => {
+    const params = new URLSearchParams(location.search);
+    const ref = params.get('ref')?.toUpperCase().trim();
+
+    if (!ref) return; // sem código, mostra form genérico
+
+    try {
+      const res = await fetch(`/indicacao/${encodeURIComponent(ref)}`);
+      if (!res.ok) {
+        document.getElementById('formState').style.display = 'none';
+        document.getElementById('invalidState').classList.add('visible');
+        return;
+      }
+      const d = await res.json();
+      codigoIndicante = ref;
+
+      // Mostra badge da loja indicante
+      document.getElementById('indicanteNome').textContent = d.nome;
+      document.getElementById('indicanteBadge').style.display = 'inline-flex';
+      document.getElementById('cardSub').textContent =
+        `"${d.nome}" te indicou para o Gerador de Mensagens WhatsApp. Preencha os dados abaixo e nossa equipe entrará em contato em breve.`;
+    } catch (err) {
+      console.error('Erro ao buscar indicação:', err);
+    }
+  })();
+
+  // ── Enviar solicitação ─────────────────────────────────────────────────────
+  async function enviarSolicitacao() {
+    const msgErr = document.getElementById('msgErr');
+    msgErr.classList.remove('visible');
+
+    const nomeLoja = document.getElementById('nomeLoja').value.trim();
+    const cnpj     = document.getElementById('cnpj').value.trim();
+    const email    = document.getElementById('email').value.trim();
+    const telefone = document.getElementById('telefone').value.trim();
+
+    if (!nomeLoja || !cnpj || !email) {
+      msgErr.textContent = 'Preencha todos os campos obrigatórios.';
+      msgErr.classList.add('visible');
+      return;
+    }
+    if (!codigoIndicante) {
+      msgErr.textContent = 'Código de indicação não encontrado na URL (?ref=CÓDIGO).';
+      msgErr.classList.add('visible');
+      return;
+    }
+
+    const btn = document.getElementById('btnSubmit');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/indicacao/solicitar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          codigo_indicante: codigoIndicante,
+          nome_loja:  nomeLoja,
+          cnpj,
+          email,
+          telefone:   telefone || undefined,
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) {
+        const errMsg = typeof d.error === 'string'
+          ? d.error
+          : Object.values(d.error ?? {}).flat().join(' ');
+        throw new Error(errMsg || 'Erro ao enviar solicitação.');
+      }
+
+      document.getElementById('emailConfirm').textContent = email;
+      document.getElementById('formState').style.display = 'none';
+      document.getElementById('successState').classList.add('visible');
+    } catch (err) {
+      msgErr.textContent = err.message;
+      msgErr.classList.add('visible');
+    } finally {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>

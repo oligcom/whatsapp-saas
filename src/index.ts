@@ -12,6 +12,8 @@ import workspacesRoutes from "./routes/workspaces.routes";
 import clienteRoutes from "./routes/cliente.routes";
 import equipeRoutes from "./routes/equipe.routes";
 import cupomRoutes from "./routes/cupom.routes";
+import avaliacoesRoutes from "./routes/avaliacoes.routes";
+import indicacoesRoutes from "./routes/indicacoes.routes";
 import healthRoutes from "./routes/health.routes";
 import { errorHandler } from "./middlewares/errorHandler";
 
@@ -32,6 +34,8 @@ app.use("/", workspacesRoutes);
 app.use("/", clienteRoutes);
 app.use("/", equipeRoutes);
 app.use("/", cupomRoutes);
+app.use("/", avaliacoesRoutes);
+app.use("/", indicacoesRoutes);
 
 app.use((_req, res, next) => {
   // Prevent Express's default HTML 404 page on unmatched routes

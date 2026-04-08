@@ -71,22 +71,27 @@ router.post(
 
       const mensagem = await gerarMensagem({ ...parsed.data, contextoDaMarca });
 
-      // Persiste a mensagem gerada (non-blocking — falha silenciosa)
+      // Persiste a mensagem gerada (aguarda para capturar o ID para avaliação)
+      let mensagemId: string | null = null;
       if (req.user!.workspace_id) {
-        supabase.from("mensagens").insert({
-          workspace_id:  req.user!.workspace_id,
-          usuario_id:    req.user!.id,
-          nome_cliente:  parsed.data.nomeCliente,
-          telefone:      parsed.data.telefone ?? null,
-          mensagem,
-          tipo_mensagem: parsed.data.tipo_mensagem,
-          tom:           parsed.data.tom,
-        }).then(({ error }) => {
-          if (error) console.error("[mensagens] Erro ao salvar:", error.message);
-        });
+        const { data: saved, error } = await supabase
+          .from("mensagens")
+          .insert({
+            workspace_id:  req.user!.workspace_id,
+            usuario_id:    req.user!.id,
+            nome_cliente:  parsed.data.nomeCliente,
+            telefone:      parsed.data.telefone ?? null,
+            mensagem,
+            tipo_mensagem: parsed.data.tipo_mensagem,
+            tom:           parsed.data.tom,
+          })
+          .select("id")
+          .single();
+        if (error) console.error("[mensagens] Erro ao salvar:", error.message);
+        mensagemId = saved?.id ?? null;
       }
 
-      res.json({ mensagem });
+      res.json({ mensagem, mensagem_id: mensagemId });
     } catch (err) {
       next(err);
     }

@@ -26,13 +26,29 @@ const workspaceSchema = z.object({
 
 router.get("/admin/workspaces", ...guard, async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const { data, error } = await supabase
-      .from("workspaces")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const [wsResult, avgResult] = await Promise.all([
+      supabase.from("workspaces").select("*").order("created_at", { ascending: false }),
+      supabase.from("mensagens").select("workspace_id, avaliacao").not("avaliacao", "is", null),
+    ]);
 
-    if (error) { res.status(500).json({ error: "Erro ao listar workspaces" }); return; }
-    res.json({ workspaces: data });
+    if (wsResult.error) { res.status(500).json({ error: "Erro ao listar workspaces" }); return; }
+
+    // Calcula média de avaliações por workspace
+    const avgMap: Record<string, { sum: number; count: number }> = {};
+    for (const m of avgResult.data ?? []) {
+      if (!avgMap[m.workspace_id]) avgMap[m.workspace_id] = { sum: 0, count: 0 };
+      avgMap[m.workspace_id].sum   += (m.avaliacao as number);
+      avgMap[m.workspace_id].count += 1;
+    }
+
+    const workspaces = (wsResult.data ?? []).map((ws) => ({
+      ...ws,
+      media_avaliacoes: avgMap[ws.id]
+        ? Math.round((avgMap[ws.id].sum / avgMap[ws.id].count) * 10) / 10
+        : null,
+    }));
+
+    res.json({ workspaces });
   } catch (err) { next(err); }
 });
 
@@ -44,12 +60,18 @@ router.post("/admin/workspaces", ...guard, async (req: Request, res: Response, n
     const trialExpira = new Date();
     trialExpira.setDate(trialExpira.getDate() + 7);
 
+    // Gera código de indicação único
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let codigoIndicacao = "";
+    for (let i = 0; i < 8; i++) codigoIndicacao += chars[Math.floor(Math.random() * chars.length)];
+
     const { data, error } = await supabase
       .from("workspaces")
       .insert({
         ...parsed.data,
         status: "trial",
         trial_expira_em: trialExpira.toISOString(),
+        codigo_indicacao: codigoIndicacao,
       })
       .select()
       .single();
