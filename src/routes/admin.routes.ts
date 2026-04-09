@@ -62,7 +62,7 @@ router.post("/admin/usuarios", ...guard, async (req: Request, res: Response, nex
 
     const { data: ws, error: wsErr } = await supabase
       .from("workspaces")
-      .select("id")
+      .select("id, email_contato")
       .eq("id", workspace_id)
       .single();
 
@@ -89,6 +89,14 @@ router.post("/admin/usuarios", ...guard, async (req: Request, res: Response, nex
       await supabase.auth.admin.deleteUser(authData.user.id);
       res.status(500).json({ error: "Erro ao vincular usuária ao workspace" });
       return;
+    }
+
+    // Se o usuário criado é cliente e o workspace não tem email_contato, preenche automaticamente
+    if (role === "cliente" && !ws.email_contato) {
+      await supabase
+        .from("workspaces")
+        .update({ email_contato: email })
+        .eq("id", workspace_id);
     }
 
     res.status(201).json({
@@ -147,6 +155,33 @@ router.patch("/admin/usuarios/:id", ...guard, async (req: Request, res: Response
         if (memberErr) {
           res.status(500).json({ error: "Erro ao atualizar workspace" });
           return;
+        }
+      }
+    }
+
+    // Se role foi alterado para "cliente", preenche email_contato do workspace se estiver vazio
+    if (role === "cliente") {
+      const { data: member } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", id)
+        .maybeSingle();
+
+      if (member?.workspace_id) {
+        const resolvedEmail = email ?? (await supabase.auth.admin.getUserById(id)).data.user?.email;
+        if (resolvedEmail) {
+          const { data: wsAtual } = await supabase
+            .from("workspaces")
+            .select("email_contato")
+            .eq("id", member.workspace_id)
+            .single();
+
+          if (!wsAtual?.email_contato) {
+            await supabase
+              .from("workspaces")
+              .update({ email_contato: resolvedEmail })
+              .eq("id", member.workspace_id);
+          }
         }
       }
     }
