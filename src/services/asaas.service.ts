@@ -92,4 +92,30 @@ export const asaasService = {
       throw error;
     }
   },
+
+  async criarCobrancaAvulsa(customerId: string, valor: number, descricao: string) {
+    try {
+      const response = await asaasApi.post("/payments", {
+        customer:    customerId,
+        billingType: "PIX",
+        value:       valor,
+        dueDate:     proximaDataCobranca(1),
+        description: descricao,
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error("[Asaas] criarCobrancaAvulsa error:", error.response?.data);
+      throw error;
+    }
+  },
+
+  async listarPagamentosCliente(customerId: string) {
+    try {
+      const response = await asaasApi.get(`/payments?customer=${customerId}&limit=50&sort=dateCreated&order=desc`);
+      return response.data;
+    } catch (error: any) {
+      console.error("[Asaas] listarPagamentosCliente error:", error.response?.data);
+      throw error;
+    }
+  },
 };

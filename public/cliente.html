@@ -823,6 +823,138 @@
     .indicacao-stat { font-size: .83rem; color: #555; }
     .indicacao-stat strong { color: #128c7e; }
 
+    /* ── Financeiro ── */
+    .fin-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .fin-banner-warn {
+      background: #fffbeb;
+      border: 1.5px solid #fbbf24;
+      border-radius: 10px;
+      padding: .85rem 1.1rem;
+      font-size: .875rem;
+      color: #92400e;
+      margin-bottom: 1.25rem;
+      display: none;
+    }
+    .fin-banner-warn.visible { display: block; }
+
+    .fin-status-pill {
+      display: inline-block;
+      padding: .25rem .75rem;
+      border-radius: 20px;
+      font-size: .82rem;
+      font-weight: 700;
+      margin: .3rem 0 .5rem;
+    }
+    .fin-pill-trial    { background: #fef3c7; color: #92400e; }
+    .fin-pill-ativo,
+    .fin-pill-active   { background: #d1fae5; color: #065f46; }
+    .fin-pill-demo     { background: #ede9fe; color: #5b21b6; }
+    .fin-pill-inadimplente { background: #fee2e2; color: #991b1b; }
+    .fin-pill-cancelado,
+    .fin-pill-inativo  { background: #f1f5f9; color: #475569; }
+
+    .btn-assinar {
+      display: block;
+      width: 100%;
+      margin-top: 1rem;
+      padding: .65rem 1rem;
+      background: #25d366;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: .95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s, opacity .15s;
+      text-align: center;
+    }
+    .btn-assinar:hover:not(:disabled) { background: #1da851; }
+    .btn-assinar:disabled { opacity: .55; cursor: not-allowed; }
+
+    .fin-qty-wrap {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      margin: .6rem 0;
+    }
+    .fin-qty-btn {
+      width: 32px; height: 32px;
+      border: 1.5px solid #ddd;
+      border-radius: 7px;
+      background: #fafafa;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #444;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .15s;
+    }
+    .fin-qty-btn:hover { border-color: #128c7e; color: #128c7e; }
+    .fin-qty-input {
+      width: 60px;
+      text-align: center;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      padding: .35rem .5rem;
+      font-size: .95rem;
+      font-weight: 700;
+      font-family: inherit;
+      color: #222;
+    }
+    .fin-qty-input:focus { outline: none; border-color: #25d366; }
+
+    .fin-price-display {
+      text-align: center;
+      padding: .6rem;
+      background: #f0fdf4;
+      border-radius: 10px;
+      margin: .5rem 0;
+    }
+    .fin-price-total {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #128c7e;
+    }
+    .fin-price-sub {
+      font-size: .78rem;
+      color: #888;
+      margin-top: .15rem;
+    }
+
+    .fin-msg {
+      margin-top: .5rem;
+      padding: .5rem .75rem;
+      border-radius: 8px;
+      font-size: .82rem;
+      display: none;
+    }
+    .fin-msg.ok  { display: block; background: #f0fdf4; border: 1.5px solid #86efac; color: #166534; }
+    .fin-msg.err { display: block; background: #fff0f0; border: 1.5px solid #fca5a5; color: #b91c1c; }
+
+    .fin-pag-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    .fin-pag-table th {
+      font-size: .72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .04em; color: #888; text-align: left;
+      padding: .65rem .9rem; background: #fafafa; border-bottom: 1.5px solid #f0f2f5;
+    }
+    .fin-pag-table td { padding: .65rem .9rem; border-bottom: 1px solid #f5f5f5; color: #333; }
+    .fin-pag-table tr:last-child td { border-bottom: none; }
+
+    .pag-status-pill {
+      display: inline-block; padding: .18rem .55rem; border-radius: 20px;
+      font-size: .72rem; font-weight: 600;
+    }
+    .pag-CONFIRMED, .pag-RECEIVED { background: #d1fae5; color: #065f46; }
+    .pag-PENDING   { background: #fef3c7; color: #92400e; }
+    .pag-OVERDUE   { background: #fee2e2; color: #991b1b; }
+    .pag-REFUNDED, .pag-CHARGEBACK, .pag-DELETED { background: #f1f5f9; color: #475569; }
+
     /* ── Banner de acesso expirado ── */
     .expired-banner {
       background: #fff5f5;
@@ -970,6 +1102,7 @@
       <button class="cli-tab active" data-pane="dashboard" onclick="switchCliTab('dashboard')">Dashboard</button>
       <button class="cli-tab" data-pane="equipe" onclick="switchCliTab('equipe')">Minha Equipe</button>
       <button class="cli-tab" data-pane="cupom" onclick="switchCliTab('cupom')">Indicações e Cupons</button>
+      <button class="cli-tab" data-pane="financeiro" onclick="switchCliTab('financeiro')">Financeiro</button>
     </div>
   </div>
 
@@ -1067,6 +1200,71 @@
           <button class="cupom-btn" id="btnAplicarCupom" onclick="aplicarCupom()">Aplicar</button>
         </div>
         <div class="cupom-result" id="cupomResult"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tab: Financeiro ──────────────────────────────────── -->
+  <div id="cli-pane-financeiro" class="cli-pane">
+    <div class="main">
+
+      <!-- Banner: trial expirando -->
+      <div class="fin-banner-warn" id="finBannerWarn">
+        ⚠️ Seu período de trial expira em <strong id="finBannerDias"></strong>. Assine agora para não perder o acesso.
+      </div>
+
+      <div class="fin-grid">
+
+        <!-- Card: status da assinatura -->
+        <div class="stat-card" id="finStatusCard">
+          <div class="spinner-wrap"><div class="spinner"></div></div>
+        </div>
+
+        <!-- Card: uso do mês -->
+        <div class="stat-card" id="finUsoCard">
+          <div class="spinner-wrap"><div class="spinner"></div></div>
+        </div>
+
+        <!-- Card: créditos extras -->
+        <div class="stat-card" id="finCreditosCard">
+          <div class="stat-label">Precisa de mais mensagens?</div>
+          <div style="font-size:.82rem;color:#666;margin:.25rem 0 .75rem;line-height:1.4">
+            Cada pacote adiciona <strong>30 mensagens</strong> imediatamente ao seu saldo.
+          </div>
+          <div class="fin-qty-wrap">
+            <button class="fin-qty-btn" onclick="ajustarPacotes(-1)">−</button>
+            <input class="fin-qty-input" type="number" id="finQtdPacotes" value="1" min="1" max="10" oninput="calcularPrecoCreditos()" />
+            <button class="fin-qty-btn" onclick="ajustarPacotes(1)">+</button>
+            <span style="font-size:.8rem;color:#888">pacote(s)</span>
+          </div>
+          <div class="fin-price-display">
+            <div class="fin-price-total" id="finPrecoTotal">R$ 9,90</div>
+            <div class="fin-price-sub" id="finPrecoDesc">30 créditos</div>
+          </div>
+          <div class="fin-msg" id="finCreditoMsg"></div>
+          <button class="btn-assinar" id="btnComprarCreditos" onclick="comprarCreditos()" style="background:#128c7e">
+            Comprar via PIX
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Histórico de pagamentos -->
+      <div class="section-title">Histórico de pagamentos</div>
+      <div class="history-card" id="finPagamentosWrap">
+        <div class="spinner-wrap"><div class="spinner"></div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Overlay: PIX créditos ─────────────────────────────── -->
+  <div class="overlay" id="overlayPix" onclick="fecharPix(event)">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:420px">
+      <div class="modal-title">Pagamento via PIX</div>
+      <div id="pixContent" style="text-align:center"></div>
+      <div class="modal-footer">
+        <button class="btn-fechar" onclick="fecharPix()">Fechar</button>
       </div>
     </div>
   </div>
@@ -1648,16 +1846,233 @@
       }
     }
 
+    // ── Financeiro ────────────────────────────────────────────────────────────
+    let finData = null;
+
+    const FIN_STATUS_LABEL = {
+      trial: 'Trial', active: 'Ativo', ativo: 'Ativo', demo: 'Demo',
+      inadimplente: 'Inadimplente', cancelado: 'Cancelado', inativo: 'Inativo',
+    };
+    const PAG_STATUS_LABEL = {
+      PENDING: 'Pendente', CONFIRMED: 'Confirmado', RECEIVED: 'Recebido',
+      OVERDUE: 'Vencido', REFUNDED: 'Estornado', CHARGEBACK: 'Chargeback', DELETED: 'Excluído',
+    };
+
+    async function carregarFinanceiro() {
+      try {
+        const res = await fetch('/cliente/financeiro', { headers: authHeaders(session) });
+        if (!res.ok) throw new Error('Erro ao carregar dados financeiros');
+        finData = await res.json();
+        renderFinanceiro(finData);
+        carregarPagamentos();
+      } catch (err) {
+        document.getElementById('finStatusCard').innerHTML =
+          `<div class="stat-label">Status</div><div class="stat-sub" style="color:#e53e3e">${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    function renderFinanceiro(d) {
+      // Banner de aviso trial expirando
+      let diasRestantes = null;
+      if (d.trial_expira_em) {
+        const expira = new Date(d.trial_expira_em);
+        const agora  = new Date();
+        diasRestantes = Math.max(0, Math.ceil((expira - agora) / (1000 * 60 * 60 * 24)));
+        if ((d.status === 'trial' || d.status === 'demo') && diasRestantes <= 3) {
+          document.getElementById('finBannerDias').textContent =
+            diasRestantes === 0 ? 'hoje' : `${diasRestantes} dia${diasRestantes > 1 ? 's' : ''}`;
+          document.getElementById('finBannerWarn').classList.add('visible');
+        }
+      }
+
+      // Card: status
+      const statusLabel = FIN_STATUS_LABEL[d.status] ?? d.status;
+      const pillClass   = `fin-pill-${d.status}`;
+      let subInfo = '';
+      if (d.trial_expira_em && (d.status === 'trial' || d.status === 'demo')) {
+        const expiraFmt = new Date(d.trial_expira_em).toLocaleDateString('pt-BR');
+        subInfo = `<div class="stat-sub">Expira em: <strong>${expiraFmt}</strong> · ${diasRestantes ?? '—'} dias restantes</div>`;
+      } else if (d.status === 'ativo' || d.status === 'active') {
+        subInfo = `<div class="stat-sub">Assinatura ativa</div>`;
+      }
+      const btnAssinar = d.status === 'trial'
+        ? `<button class="btn-assinar" id="btnAssinarAgora" onclick="assinarAgora()">Assinar agora — R$ 49,90/mês</button>`
+        : '';
+      document.getElementById('finStatusCard').innerHTML = `
+        <div class="stat-label">Status da assinatura</div>
+        <div class="fin-status-pill ${pillClass}">${statusLabel}</div>
+        ${subInfo}
+        ${btnAssinar}`;
+
+      // Card: uso do mês
+      const usadas   = d.mensagens_mes ?? 0;
+      const limite   = d.limite_mensagens_mes ?? 0;
+      const extras   = d.creditos_extras ?? 0;
+      const total    = limite + extras;
+      const pct      = total > 0 ? Math.min(100, Math.round((usadas / total) * 100)) : 0;
+      const barCls   = pct >= 100 ? 'danger' : pct >= 80 ? 'warning' : '';
+      document.getElementById('finUsoCard').innerHTML = `
+        <div class="stat-label">Uso do mês atual</div>
+        <div style="font-size:1.6rem;font-weight:800;color:#128c7e;margin:.2rem 0">
+          ${usadas}<span style="font-size:.9rem;font-weight:600;color:#aaa"> / ${total}</span>
+        </div>
+        <div class="usage-bar-wrap"><div class="usage-bar ${barCls}" style="width:${pct}%"></div></div>
+        <div class="stat-sub" style="margin-top:.45rem">
+          ${pct}% utilizado
+          ${extras > 0 ? `· <strong>${extras}</strong> crédito${extras !== 1 ? 's' : ''} extra${extras !== 1 ? 's' : ''}` : ''}
+        </div>`;
+    }
+
+    async function assinarAgora() {
+      const btn = document.getElementById('btnAssinarAgora');
+      btn.disabled = true; btn.textContent = 'Processando…';
+      try {
+        const res = await fetch('/cliente/assinar', { method: 'POST', headers: authHeaders(session) });
+        const d   = await res.json();
+        if (!res.ok) throw new Error(d.error ?? 'Erro ao assinar');
+        finData = { ...finData, status: d.workspace.status, asaas_subscription_id: d.workspace.asaas_subscription_id };
+        renderFinanceiro(finData);
+        carregarPagamentos();
+      } catch (err) {
+        btn.disabled = false; btn.textContent = 'Assinar agora — R$ 49,90/mês';
+        alert('Erro: ' + err.message);
+      }
+    }
+
+    function calcularPrecoCreditos() {
+      const qty = Math.max(1, Math.min(10, parseInt(document.getElementById('finQtdPacotes').value) || 1));
+      document.getElementById('finQtdPacotes').value = qty;
+      const preco   = 9.90 + Math.max(0, qty - 1) * 8.91;
+      const creditos = qty * 30;
+      document.getElementById('finPrecoTotal').textContent =
+        'R$ ' + preco.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+      document.getElementById('finPrecoDesc').textContent = `${creditos} créditos`;
+    }
+
+    function ajustarPacotes(delta) {
+      const input = document.getElementById('finQtdPacotes');
+      input.value = Math.max(1, Math.min(10, (parseInt(input.value) || 1) + delta));
+      calcularPrecoCreditos();
+    }
+
+    async function comprarCreditos() {
+      const btn = document.getElementById('btnComprarCreditos');
+      const msg = document.getElementById('finCreditoMsg');
+      const pacotes = parseInt(document.getElementById('finQtdPacotes').value) || 1;
+      msg.className = 'fin-msg';
+
+      btn.disabled = true; btn.textContent = 'Gerando PIX…';
+      try {
+        const res = await fetch('/cliente/comprar-creditos', {
+          method: 'POST', headers: authHeaders(session), body: JSON.stringify({ pacotes }),
+        });
+        const d = await res.json();
+        if (!res.ok) throw new Error(d.error ?? 'Erro ao gerar cobrança');
+        abrirPix(d);
+      } catch (err) {
+        msg.textContent = err.message;
+        msg.className = 'fin-msg err';
+      } finally {
+        btn.disabled = false; btn.textContent = 'Comprar via PIX';
+      }
+    }
+
+    function abrirPix(d) {
+      const preco = 'R$ ' + (d.valor ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+      const copiaECola = d.pix_copia_cola ?? '';
+      document.getElementById('pixContent').innerHTML = `
+        <p style="font-size:.88rem;color:#555;margin-bottom:1rem">
+          ${d.creditos} créditos · ${preco}
+        </p>
+        ${d.pix_qrcode_url
+          ? `<img src="data:image/png;base64,${escapeHtml(d.pix_qrcode_url)}" alt="QR Code PIX"
+               style="max-width:200px;border-radius:8px;margin-bottom:1rem;border:1px solid #e2e8f0">`
+          : ''}
+        ${copiaECola ? `
+        <div style="margin-bottom:.75rem">
+          <div style="font-size:.75rem;font-weight:600;color:#888;margin-bottom:.35rem">Copia e cola</div>
+          <div style="background:#f0f2f5;border-radius:8px;padding:.65rem .85rem;font-size:.75rem;word-break:break-all;color:#444;font-family:monospace;max-height:80px;overflow-y:auto">${escapeHtml(copiaECola)}</div>
+          <button class="btn-copiar" id="btnCopiarPix" onclick="copiarPix()" style="margin-top:.5rem">Copiar código PIX</button>
+        </div>` : ''}
+        <p style="font-size:.78rem;color:#888;margin-top:.5rem">
+          Os créditos serão adicionados automaticamente após a confirmação do pagamento.
+        </p>`;
+      document.getElementById('overlayPix').classList.add('open');
+    }
+
+    function copiarPix() {
+      const btn = document.getElementById('btnCopiarPix');
+      const codigo = document.getElementById('finCreditoMsg'); // ref via closure
+      const pixEl = document.querySelector('#pixContent .btn-copiar');
+      // Pega o texto do bloco de copia e cola
+      const blocos = document.querySelectorAll('#pixContent div[style*="monospace"]');
+      if (blocos.length) {
+        navigator.clipboard.writeText(blocos[0].textContent.trim()).catch(() => {});
+      }
+      if (btn) { btn.textContent = 'Copiado!'; setTimeout(() => btn.textContent = 'Copiar código PIX', 2000); }
+    }
+
+    function fecharPix(e) {
+      if (e && e.target !== document.getElementById('overlayPix')) return;
+      document.getElementById('overlayPix').classList.remove('open');
+    }
+
+    async function carregarPagamentos() {
+      const wrap = document.getElementById('finPagamentosWrap');
+      wrap.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
+      try {
+        const res = await fetch('/cliente/pagamentos', { headers: authHeaders(session) });
+        if (!res.ok) throw new Error('Erro ao carregar pagamentos');
+        const { pagamentos } = await res.json();
+        renderPagamentos(pagamentos);
+      } catch (err) {
+        wrap.innerHTML = `<div class="empty">Erro: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    function renderPagamentos(pags) {
+      const wrap = document.getElementById('finPagamentosWrap');
+      if (!pags.length) {
+        wrap.innerHTML = '<div class="empty">Nenhum pagamento registrado ainda.</div>';
+        return;
+      }
+      const rows = pags.map(p => {
+        const st    = p.status ?? '';
+        const stLbl = PAG_STATUS_LABEL[st] ?? st;
+        const valor = p.value != null
+          ? 'R$ ' + Number(p.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+          : '—';
+        return `<tr>
+          <td style="white-space:nowrap;font-size:.82rem;color:#888">${escapeHtml(p.dueDate ?? '—')}</td>
+          <td style="font-size:.88rem">${escapeHtml(p.description ?? '—')}</td>
+          <td>${valor}</td>
+          <td><span class="pag-status-pill pag-${st}">${stLbl}</span></td>
+        </tr>`;
+      }).join('');
+      wrap.innerHTML = `
+        <div style="overflow-x:auto">
+          <table class="fin-pag-table">
+            <thead><tr><th>Vencimento</th><th>Descrição</th><th>Valor</th><th>Status</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    }
+
     // ── Tabs ─────────────────────────────────────────────────────────────────
     let indicacaoCarregada = false;
+    let financeiroCarregado = false;
     function switchCliTab(pane) {
       document.querySelectorAll('.cli-tab').forEach(b =>
         b.classList.toggle('active', b.getAttribute('data-pane') === pane)
       );
       document.querySelectorAll('.cli-pane').forEach(p => p.classList.remove('active'));
       document.getElementById(`cli-pane-${pane}`).classList.add('active');
-      if (pane === 'equipe' && !equipeCarregada) carregarEquipe();
-      if (pane === 'cupom'  && !indicacaoCarregada) carregarIndicacao();
+      if (pane === 'equipe'      && !equipeCarregada)    carregarEquipe();
+      if (pane === 'cupom'       && !indicacaoCarregada) carregarIndicacao();
+      if (pane === 'financeiro'  && !financeiroCarregado) {
+        financeiroCarregado = true;
+        carregarFinanceiro();
+      }
     }
 
     // ── Minha Equipe ─────────────────────────────────────────────────────────

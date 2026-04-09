@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { supabase } from "../config/supabase";
 import { requireAuth, requireRole } from "../middlewares/auth.middleware";
+import { asaasService } from "../services/asaas.service";
 
 const router = Router();
 const guard = [requireAuth, requireRole("cliente")] as const;
@@ -189,6 +190,115 @@ router.patch("/cliente/workspace", ...guard, async (req: Request, res: Response,
 
     if (error || !data) { res.status(500).json({ error: "Erro ao salvar workspace" }); return; }
     res.json({ workspace: data });
+  } catch (err) { next(err); }
+});
+
+// ── Financeiro: status + uso do mês ──────────────────────────────────────────
+
+router.get("/cliente/financeiro", ...guard, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const workspaceId = req.user!.workspace_id;
+    if (!workspaceId) { res.status(400).json({ error: "Sem workspace" }); return; }
+
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const [wsResult, { count: mensagensMes }] = await Promise.all([
+      supabase
+        .from("workspaces")
+        .select("id, status, trial_expira_em, limite_mensagens_mes, creditos_extras, asaas_subscription_id, asaas_customer_id")
+        .eq("id", workspaceId)
+        .single(),
+      supabase
+        .from("mensagens")
+        .select("*", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId)
+        .gte("created_at", startOfMonth.toISOString()),
+    ]);
+
+    if (wsResult.error || !wsResult.data) { res.status(404).json({ error: "Workspace não encontrado" }); return; }
+
+    res.json({
+      status:                wsResult.data.status,
+      trial_expira_em:       wsResult.data.trial_expira_em,
+      limite_mensagens_mes:  wsResult.data.limite_mensagens_mes,
+      creditos_extras:       wsResult.data.creditos_extras ?? 0,
+      asaas_subscription_id: wsResult.data.asaas_subscription_id,
+      asaas_customer_id:     wsResult.data.asaas_customer_id,
+      mensagens_mes:         mensagensMes ?? 0,
+    });
+  } catch (err) { next(err); }
+});
+
+// ── Financeiro: histórico de pagamentos ──────────────────────────────────────
+
+router.get("/cliente/pagamentos", ...guard, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const workspaceId = req.user!.workspace_id;
+    if (!workspaceId) { res.status(400).json({ error: "Sem workspace" }); return; }
+
+    const { data: ws, error } = await supabase
+      .from("workspaces")
+      .select("asaas_customer_id, asaas_subscription_id")
+      .eq("id", workspaceId)
+      .single();
+
+    if (error || !ws) { res.status(404).json({ error: "Workspace não encontrado" }); return; }
+    if (!ws.asaas_customer_id) { res.json({ pagamentos: [] }); return; }
+
+    try {
+      const data = await asaasService.listarPagamentosCliente(ws.asaas_customer_id);
+      res.json({ pagamentos: data.data ?? [] });
+    } catch {
+      res.json({ pagamentos: [] });
+    }
+  } catch (err) { next(err); }
+});
+
+// ── Financeiro: comprar créditos extras (cobrança avulsa PIX) ─────────────────
+
+const comprarCreditosSchema = z.object({
+  pacotes: z.coerce.number().int().min(1).max(10),
+});
+
+router.post("/cliente/comprar-creditos", ...guard, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const workspaceId = req.user!.workspace_id;
+    if (!workspaceId) { res.status(400).json({ error: "Sem workspace" }); return; }
+
+    const parsed = comprarCreditosSchema.safeParse(req.body);
+    if (!parsed.success) { res.status(400).json({ error: parsed.error.flatten().fieldErrors }); return; }
+
+    const { pacotes } = parsed.data;
+
+    const { data: ws, error } = await supabase
+      .from("workspaces")
+      .select("nome, asaas_customer_id")
+      .eq("id", workspaceId)
+      .single();
+
+    if (error || !ws) { res.status(404).json({ error: "Workspace não encontrado" }); return; }
+    if (!ws.asaas_customer_id) {
+      res.status(400).json({ error: "Dados de cobrança não configurados. Complete o onboarding com CNPJ e e-mail." });
+      return;
+    }
+
+    // Preço: 1º pacote R$9,90 + demais R$8,91 cada
+    const valor = parseFloat((9.90 + Math.max(0, pacotes - 1) * 8.91).toFixed(2));
+    const creditos = pacotes * 30;
+    const descricao = `${creditos} créditos extras — ${ws.nome}`;
+
+    const cobranca = await asaasService.criarCobrancaAvulsa(ws.asaas_customer_id, valor, descricao);
+    const pix      = await asaasService.gerarSegundaVia(cobranca.id);
+
+    res.json({
+      pagamento_id:   cobranca.id,
+      valor,
+      creditos,
+      pix_copia_cola: pix.payload ?? null,
+      pix_qrcode_url: pix.encodedImage ?? null,
+    });
   } catch (err) { next(err); }
 });
 
