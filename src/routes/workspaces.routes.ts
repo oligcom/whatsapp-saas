@@ -89,46 +89,69 @@ router.post("/admin/workspaces", ...guard, async (req: Request, res: Response, n
 
     if (error) { res.status(500).json({ error: "Erro ao criar workspace" }); return; }
 
-    // Integração Asaas: apenas se API key configurada e cnpj + email presentes
+    // Integração Asaas: cadastra cliente se API key configurada e cnpj + email presentes
+    // A assinatura NÃO é criada automaticamente — só via liberar-cobranca ou cliente/assinar
     if (env.ASAAS_API_KEY && parsed.data.cnpj && parsed.data.email_contato) {
       try {
         const cliente = await asaasService.criarOuBuscarCliente({
-          name:     parsed.data.nome,
-          cpfCnpj:  parsed.data.cnpj,
-          email:    parsed.data.email_contato,
+          name:        parsed.data.nome,
+          cpfCnpj:     parsed.data.cnpj,
+          email:       parsed.data.email_contato,
           mobilePhone: parsed.data.telefone ?? undefined,
-          city:     parsed.data.cidade     ?? undefined,
-          state:    parsed.data.estado     ?? undefined,
+          city:        parsed.data.cidade   ?? undefined,
+          state:       parsed.data.estado   ?? undefined,
         });
 
-        const assinatura = await asaasService.criarAssinatura(
-          cliente.id,
-          `Plano Gerador - ${parsed.data.nome}`
-        );
-
-        const { data: updated, error: updateErr } = await supabase
+        const { data: updated } = await supabase
           .from("workspaces")
-          .update({
-            asaas_customer_id:     cliente.id,
-            asaas_subscription_id: assinatura.id,
-          })
+          .update({ asaas_customer_id: cliente.id })
           .eq("id", data.id)
           .select()
           .single();
 
-        if (updateErr) throw updateErr;
-        res.status(201).json({ workspace: updated });
-        return;
+        if (updated) {
+          res.status(201).json({ workspace: updated });
+          return;
+        }
       } catch (asaasErr: unknown) {
-        // Rollback: remove o workspace criado para não deixar registro sem cobrança
-        await supabase.from("workspaces").delete().eq("id", data.id);
+        // Não faz rollback: workspace salvo mesmo sem cliente Asaas
         const msg = asaasErr instanceof Error ? asaasErr.message : "Erro desconhecido";
-        res.status(502).json({ error: `Erro ao configurar cobrança no Asaas: ${msg}` });
-        return;
+        console.error(`[Asaas] Erro ao criar cliente para workspace ${data.id}: ${msg}`);
       }
     }
 
     res.status(201).json({ workspace: data });
+  } catch (err) { next(err); }
+});
+
+// ── Liberar cobrança Asaas (gestor) ──────────────────────────────────────────
+
+router.post("/admin/workspaces/:id/liberar-cobranca", ...guard, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { data: ws, error: wsErr } = await supabase
+      .from("workspaces")
+      .select("id, nome, asaas_customer_id, asaas_subscription_id")
+      .eq("id", req.params.id)
+      .single();
+
+    if (wsErr || !ws) { res.status(404).json({ error: "Workspace não encontrado" }); return; }
+    if (!ws.asaas_customer_id) { res.status(400).json({ error: "Workspace sem cliente no Asaas. Verifique se CNPJ e e-mail foram preenchidos." }); return; }
+    if (ws.asaas_subscription_id) { res.status(400).json({ error: "Workspace já possui assinatura ativa." }); return; }
+
+    const assinatura = await asaasService.criarAssinatura(
+      ws.asaas_customer_id,
+      `Plano Gerador - ${ws.nome}`
+    );
+
+    const { data: updated, error: updateErr } = await supabase
+      .from("workspaces")
+      .update({ asaas_subscription_id: assinatura.id, asaas_cobranca_liberada: true })
+      .eq("id", req.params.id)
+      .select()
+      .single();
+
+    if (updateErr || !updated) { res.status(500).json({ error: "Erro ao atualizar workspace" }); return; }
+    res.json({ workspace: updated });
   } catch (err) { next(err); }
 });
 

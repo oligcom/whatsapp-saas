@@ -744,6 +744,7 @@
 
     <div class="modal-footer">
       <button class="btn-cancel" onclick="fecharModalFin()">Fechar</button>
+      <button class="btn-save" id="btnLiberarCobranca" onclick="liberarCobranca()" style="display:none;background:#128c7e;border-color:#128c7e">Liberar cobrança</button>
       <button class="btn-danger" id="btnCancelarAssinatura" onclick="cancelarAssinatura()">Cancelar assinatura</button>
     </div>
   </div>
@@ -1626,8 +1627,8 @@ function filtrarAssinaturas() {
   renderAssinaturas();
 }
 
-const WS_STATUS_LABEL = { active: "Ativo", trial: "Trial", demo: "Demo", suspended: "Suspenso" };
-const WS_STATUS_CLASS = { active: "st-active", trial: "st-trial", demo: "st-demo", suspended: "st-suspended" };
+const WS_STATUS_LABEL = { active: "Ativo", ativo: "Ativo", trial: "Trial", demo: "Demo", suspended: "Suspenso", inadimplente: "Inadimplente", cancelado: "Cancelado", inativo: "Inativo" };
+const WS_STATUS_CLASS = { active: "st-active", ativo: "st-active", trial: "st-trial", demo: "st-demo", suspended: "st-suspended", inadimplente: "st-overdue", cancelado: "st-inactive", inativo: "st-inactive" };
 const ASAAS_STATUS_LABEL = { ACTIVE: "Ativa", INACTIVE: "Inativa", OVERDUE: "Inadimplente" };
 const ASAAS_STATUS_CLASS = { ACTIVE: "st-active", OVERDUE: "st-overdue", INACTIVE: "st-inactive" };
 
@@ -1645,6 +1646,7 @@ function renderAssinaturas() {
     const aCls    = ASAAS_STATUS_CLASS[aSt]      ?? "st-inactive";
     const aLbl    = ASAAS_STATUS_LABEL[aSt]      ?? (aSt ?? "—");
     const hasSub  = !!ws.asaas_subscription_id;
+    const podeLiberar = ws.status === "demo" && !ws.asaas_cobranca_liberada && !hasSub;
 
     return `<tr class="row-clickable" onclick="abrirModalFin('${esc(ws.id)}')">
       <td><strong>${esc(ws.nome ?? "—")}</strong><div style="font-size:.75rem;color:#888">${esc(ws.cnpj ?? "—")}</div></td>
@@ -1655,6 +1657,10 @@ function renderAssinaturas() {
         : `<span style="color:#aaa;font-size:.78rem">Sem assinatura</span>`}</td>
       <td style="font-size:.75rem;color:#888;font-family:monospace">${hasSub ? esc(ws.asaas_subscription_id) : "—"}</td>
       <td style="white-space:nowrap;font-size:.78rem;color:#888">${fmtDate(ws.created_at)}</td>
+      <td style="white-space:nowrap">${podeLiberar
+        ? `<button class="btn-edit" style="font-size:.72rem;border-color:#128c7e;color:#128c7e"
+             onclick="event.stopPropagation();liberarCobranca('${esc(ws.id)}', this)">Liberar cobrança</button>`
+        : ""}</td>
     </tr>`;
   }).join("");
 
@@ -1662,7 +1668,7 @@ function renderAssinaturas() {
     <table>
       <thead><tr>
         <th>Workspace / CNPJ</th><th>E-mail</th><th>Status local</th>
-        <th>Status Asaas</th><th>ID Assinatura</th><th>Criado em</th>
+        <th>Status Asaas</th><th>ID Assinatura</th><th>Criado em</th><th></th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
@@ -1685,6 +1691,12 @@ async function abrirModalFin(wsId) {
     CNPJ: ${esc(finWsAtivo.cnpj ?? "—")} &nbsp;|&nbsp; E-mail: ${esc(finWsAtivo.email_contato ?? "—")}<br>
     Status: <span class="status-badge ${wsCls}">${wsLbl}</span>
     &nbsp;|&nbsp; Assinatura: <code style="font-size:.8rem;background:#eee;padding:.1rem .3rem;border-radius:4px">${esc(finWsAtivo.asaas_subscription_id ?? "—")}</code>`;
+
+  const podeLiberar = finWsAtivo.status === "demo" && !finWsAtivo.asaas_cobranca_liberada && !finWsAtivo.asaas_subscription_id;
+  const btnLiberar = document.getElementById("btnLiberarCobranca");
+  btnLiberar.style.display = podeLiberar ? "" : "none";
+  btnLiberar.disabled = false;
+  btnLiberar.textContent = "Liberar cobrança";
 
   document.getElementById("btnCancelarAssinatura").disabled = !finWsAtivo.asaas_subscription_id;
   document.getElementById("finCobrancasWrap").innerHTML = `<div class="empty-state">Carregando cobranças…</div>`;
@@ -1781,6 +1793,45 @@ async function cancelarAssinatura() {
   } catch (err) {
     setError("finModalError", err.message);
     btn.disabled = false; btn.textContent = "Cancelar assinatura";
+  }
+}
+
+async function liberarCobranca(wsId, btnTabela) {
+  const ws = wsId ? assinaturas.find(w => w.id === wsId) : finWsAtivo;
+  if (!ws) return;
+  if (!confirm(`Liberar cobrança para "${ws.nome}"?\nIsso criará uma assinatura no Asaas com vencimento em 7 dias.`)) return;
+
+  const btnModal = document.getElementById("btnLiberarCobranca");
+  if (btnTabela) { btnTabela.disabled = true; btnTabela.textContent = "Liberando…"; }
+  if (!wsId) { btnModal.disabled = true; btnModal.textContent = "Liberando…"; }
+  setError("finModalError", null);
+  setSuccess("finModalSuccess", null);
+
+  try {
+    const res = await fetch(`/admin/workspaces/${ws.id}/liberar-cobranca`, {
+      method: "POST", headers: authHeaders(session),
+    });
+    const d = await res.json();
+    if (!res.ok) throw new Error(flatError(d.error));
+
+    // Atualiza dados locais
+    const idx = assinaturas.findIndex(w => w.id === ws.id);
+    if (idx >= 0) {
+      assinaturas[idx].asaas_subscription_id = d.workspace.asaas_subscription_id;
+      assinaturas[idx].asaas_cobranca_liberada = true;
+    }
+    filtrarAssinaturas();
+
+    if (!wsId) {
+      setSuccess("finModalSuccess", "Cobrança liberada! Assinatura criada no Asaas.");
+      btnModal.style.display = "none";
+      document.getElementById("btnCancelarAssinatura").disabled = false;
+    }
+  } catch (err) {
+    if (!wsId) setError("finModalError", err.message);
+    else alert("Erro: " + err.message);
+    if (btnTabela) { btnTabela.disabled = false; btnTabela.textContent = "Liberar cobrança"; }
+    if (!wsId) { btnModal.disabled = false; btnModal.textContent = "Liberar cobrança"; }
   }
 }
 

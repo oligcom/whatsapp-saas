@@ -4,7 +4,8 @@ import { requireAuth, requireRole } from "../middlewares/auth.middleware";
 import { asaasService } from "../services/asaas.service";
 
 const router = Router();
-const guard = [requireAuth, requireRole("gestor")] as const;
+const guard        = [requireAuth, requireRole("gestor")]  as const;
+const clienteGuard = [requireAuth, requireRole("cliente")] as const;
 
 // ── Resumo ────────────────────────────────────────────────────────────────────
 
@@ -35,7 +36,7 @@ router.get("/admin/financeiro/assinaturas", ...guard, async (_req: Request, res:
   try {
     const { data, error } = await supabase
       .from("workspaces")
-      .select("id, nome, status, asaas_subscription_id, asaas_customer_id, email_contato, cnpj, created_at")
+      .select("id, nome, status, asaas_subscription_id, asaas_customer_id, asaas_cobranca_liberada, email_contato, cnpj, created_at")
       .order("created_at", { ascending: false });
 
     if (error) { res.status(500).json({ error: "Erro ao buscar workspaces" }); return; }
@@ -105,6 +106,50 @@ router.post("/admin/financeiro/cobrancas/:paymentId/segunda-via", ...guard, asyn
     if (err.response?.status === 404) { res.status(404).json({ error: "Cobrança não encontrada" }); return; }
     next(err);
   }
+});
+
+// ── Cliente: assinar plano (trial → cria assinatura Asaas) ───────────────────
+
+router.post("/cliente/assinar", ...clienteGuard, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const workspaceId = req.user!.workspace_id;
+    if (!workspaceId) { res.status(400).json({ error: "Sem workspace associado" }); return; }
+
+    const { data: ws, error: wsErr } = await supabase
+      .from("workspaces")
+      .select("id, nome, status, asaas_customer_id, asaas_subscription_id")
+      .eq("id", workspaceId)
+      .single();
+
+    if (wsErr || !ws) { res.status(404).json({ error: "Workspace não encontrado" }); return; }
+    if (ws.status !== "trial") {
+      res.status(400).json({ error: "Assinatura disponível apenas para workspaces em período de trial." });
+      return;
+    }
+    if (!ws.asaas_customer_id) {
+      res.status(400).json({ error: "Dados de cobrança não configurados. Entre em contato com o suporte." });
+      return;
+    }
+    if (ws.asaas_subscription_id) {
+      res.status(400).json({ error: "Este workspace já possui uma assinatura ativa." });
+      return;
+    }
+
+    const assinatura = await asaasService.criarAssinatura(
+      ws.asaas_customer_id,
+      `Plano Gerador - ${ws.nome}`
+    );
+
+    const { data: updated, error: updateErr } = await supabase
+      .from("workspaces")
+      .update({ asaas_subscription_id: assinatura.id, asaas_cobranca_liberada: true })
+      .eq("id", workspaceId)
+      .select()
+      .single();
+
+    if (updateErr || !updated) { res.status(500).json({ error: "Erro ao ativar assinatura" }); return; }
+    res.json({ workspace: updated });
+  } catch (err) { next(err); }
 });
 
 export default router;
