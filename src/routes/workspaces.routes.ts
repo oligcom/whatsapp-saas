@@ -20,7 +20,10 @@ const workspaceSchema = z.object({
   nome: z.string().min(1).max(100),
   segmento: z.string().min(1).max(100),
   contexto_marca: z.string().min(1),
-  logo_url: z.string().url().or(z.literal("")).optional(),
+  logo_url: z.string().max(5_000_000).refine(
+    v => !v || v.startsWith("data:image/") || v.startsWith("http://") || v.startsWith("https://"),
+    { message: "logo_url deve ser uma URL ou imagem em base64" }
+  ).optional().nullable(),
   limite_mensagens_mes: z.coerce.number().int().min(1).max(100_000).default(30),
   cnpj:          z.string().max(20).optional().nullable(),
   email_contato: z.string().email().or(z.literal("")).optional().nullable(),
@@ -93,7 +96,7 @@ router.post("/admin/workspaces", ...guard, async (req: Request, res: Response, n
           name:     parsed.data.nome,
           cpfCnpj:  parsed.data.cnpj,
           email:    parsed.data.email_contato,
-          phone:    parsed.data.telefone   ?? undefined,
+          mobilePhone: parsed.data.telefone ?? undefined,
           city:     parsed.data.cidade     ?? undefined,
           state:    parsed.data.estado     ?? undefined,
         });

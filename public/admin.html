@@ -223,6 +223,66 @@
     }
     .btn-reset-pass:hover { background: #fef3c7; border-color: #d97706; }
 
+    /* ── Barra de pesquisa / filtro ── */
+    .filter-row { display: flex; gap: .5rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+    .search-input {
+      flex: 1; min-width: 180px; padding: .45rem .75rem;
+      border: 1.5px solid #ddd; border-radius: 8px;
+      font-size: .85rem; color: #333; background: #fafafa;
+      transition: border-color .15s;
+    }
+    .search-input:focus { outline: none; border-color: #25d366; background: #fff; }
+    .filter-select {
+      padding: .45rem .7rem; border: 1.5px solid #ddd; border-radius: 8px;
+      font-size: .82rem; color: #333; background: #fff; cursor: pointer;
+    }
+
+    /* ── Financeiro ── */
+    .fin-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+    .fin-metric  { background: #fff; border-radius: 12px; padding: 1rem 1.25rem; box-shadow: 0 2px 12px rgba(0,0,0,.07); }
+    .fin-metric-label { font-size: .72rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: .04em; }
+    .fin-metric-value { font-size: 1.6rem; font-weight: 800; color: #128c7e; line-height: 1.2; margin-top: .2rem; }
+    .fin-metric-value.red { color: #ef4444; }
+    .fin-metric-sub   { font-size: .72rem; color: #aaa; margin-top: .1rem; }
+
+    .fin-filter-row { display: flex; gap: .5rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+    .fin-filter-row label { font-size: .78rem; font-weight: 600; color: #666; }
+    .fin-filter-row select, .fin-filter-row input[type="date"] {
+      padding: .4rem .7rem; border: 1.5px solid #ddd; border-radius: 8px;
+      font-size: .82rem; color: #333; background: #fff; cursor: pointer;
+    }
+    .fin-period-custom { display: none; gap: .5rem; align-items: center; }
+    .fin-period-custom.visible { display: flex; }
+
+    .status-badge { display: inline-block; padding: .18rem .55rem; border-radius: 20px; font-size: .72rem; font-weight: 700; }
+    .st-active    { background: #e9faf0; color: #128c7e; }
+    .st-trial     { background: #eff6ff; color: #2563eb; }
+    .st-demo      { background: #f3e8ff; color: #7c3aed; }
+    .st-suspended { background: #fef9c3; color: #92400e; }
+    .st-overdue   { background: #fff0f0; color: #b91c1c; }
+    .st-inactive  { background: #f3f4f6; color: #6b7280; }
+
+    .btn-danger {
+      padding: .3rem .75rem; border: 1.5px solid #ef4444; border-radius: 7px;
+      background: #fff0f0; font-size: .78rem; font-weight: 600; color: #ef4444;
+      cursor: pointer; transition: all .15s;
+    }
+    .btn-danger:hover  { background: #ef4444; color: #fff; }
+    .btn-danger:disabled { opacity: .5; cursor: not-allowed; }
+
+    .btn-info {
+      padding: .3rem .75rem; border: 1.5px solid #3b82f6; border-radius: 7px;
+      background: #eff6ff; font-size: .78rem; font-weight: 600; color: #2563eb;
+      cursor: pointer; transition: all .15s;
+    }
+    .btn-info:hover    { background: #3b82f6; color: #fff; }
+    .btn-info:disabled { opacity: .5; cursor: not-allowed; }
+
+    .modal-wide { max-width: 700px; }
+    .cobr-table-wrap { max-height: 300px; overflow-y: auto; border: 1px solid #f0f2f5; border-radius: 8px; }
+
+    .cobr-status { display: inline-block; padding: .15rem .5rem; border-radius: 20px; font-size: .72rem; font-weight: 700; }
+
     .senha-box {
       display: none; background: #fffbeb; border: 1.5px solid #fbbf24;
       border-radius: 8px; padding: .75rem; margin-top: .6rem;
@@ -274,6 +334,7 @@
     <button class="tab-btn" data-tab="usuarios" onclick="switchTab('usuarios')">Usuários</button>
     <button class="tab-btn" data-tab="cupons" onclick="switchTab('cupons')">Cupons</button>
     <button class="tab-btn" data-tab="solicitacoes" onclick="switchTab('solicitacoes')">Solicitações</button>
+    <button class="tab-btn" data-tab="financeiro"   onclick="switchTab('financeiro')">Financeiro</button>
   </div>
 
   <!-- Tab: Workspaces -->
@@ -284,6 +345,16 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Novo workspace
       </button>
+    </div>
+    <div class="filter-row">
+      <input class="search-input" type="text" id="wsBusca" placeholder="Pesquisar por nome ou CNPJ…" oninput="filtrarWorkspaces()" />
+      <select class="filter-select" id="wsStatusFiltro" onchange="filtrarWorkspaces()">
+        <option value="">Todos os status</option>
+        <option value="active">Ativo</option>
+        <option value="trial">Trial</option>
+        <option value="demo">Demo</option>
+        <option value="suspended">Suspenso</option>
+      </select>
     </div>
     <div id="wsGrid" class="ws-grid"></div>
   </div>
@@ -296,6 +367,15 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Novo usuário
       </button>
+    </div>
+    <div class="filter-row">
+      <input class="search-input" type="text" id="userBusca" placeholder="Pesquisar por email…" oninput="filtrarUsuarios()" />
+      <select class="filter-select" id="userRoleFiltro" onchange="filtrarUsuarios()">
+        <option value="">Todos os perfis</option>
+        <option value="vendedora">Vendedora</option>
+        <option value="cliente">Cliente</option>
+        <option value="gestor">Gestor</option>
+      </select>
     </div>
     <div class="card">
       <div id="usersTableWrap">
@@ -313,6 +393,60 @@
       <div id="solicitacoesTableWrap">
         <div class="empty-state">Carregando...</div>
       </div>
+    </div>
+  </div>
+
+  <!-- Tab: Financeiro -->
+  <div class="tab-content" id="tab-financeiro">
+
+    <!-- Métricas -->
+    <div class="fin-metrics">
+      <div class="fin-metric">
+        <div class="fin-metric-label">Ativos</div>
+        <div class="fin-metric-value" id="finAtivos">—</div>
+      </div>
+      <div class="fin-metric">
+        <div class="fin-metric-label">Com assinatura</div>
+        <div class="fin-metric-value" id="finPagantes">—</div>
+      </div>
+      <div class="fin-metric">
+        <div class="fin-metric-label">Suspensos</div>
+        <div class="fin-metric-value red" id="finSuspensos">—</div>
+      </div>
+      <div class="fin-metric">
+        <div class="fin-metric-label">MRR estimado</div>
+        <div class="fin-metric-value" id="finMRR">—</div>
+        <div class="fin-metric-sub">R$ 49,90 × ativos c/ assinatura</div>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="fin-filter-row">
+      <label>Período:</label>
+      <select id="finPeriodoSelect" onchange="onFinPeriodoChange()">
+        <option value="mes-atual">Mês atual</option>
+        <option value="3meses">Últimos 3 meses</option>
+        <option value="todos">Todos</option>
+        <option value="personalizado">Personalizado</option>
+      </select>
+      <div class="fin-period-custom" id="finPeriodoCustom">
+        <input type="date" id="finDataInicio" onchange="filtrarAssinaturas()" />
+        <span style="font-size:.82rem;color:#888">até</span>
+        <input type="date" id="finDataFim"    onchange="filtrarAssinaturas()" />
+      </div>
+      <input class="search-input" type="text" id="finBusca" placeholder="Nome ou CNPJ…" oninput="filtrarAssinaturas()" style="min-width:160px;max-width:240px" />
+      <select id="finStatusFiltro" onchange="filtrarAssinaturas()" style="margin-left:auto">
+        <option value="">Todos os status</option>
+        <option value="active">Ativo</option>
+        <option value="suspended">Suspenso</option>
+        <option value="trial">Trial</option>
+        <option value="demo">Demo</option>
+      </select>
+    </div>
+
+    <!-- Tabela -->
+    <div class="card">
+      <div id="finTableWrap"><div class="empty-state">Carregando…</div></div>
     </div>
   </div>
 
@@ -383,8 +517,12 @@
 
     <div style="margin:.25rem 0 .6rem;font-size:.72rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.04em">Configuração</div>
     <div class="field">
-      <label>URL do logo <span style="font-weight:400;color:#999">(opcional)</span></label>
-      <input type="url" id="wsLogoUrl" placeholder="https://..." />
+      <label>Logo <span style="font-weight:400;color:#999">(opcional)</span></label>
+      <div id="wsLogoPreviewWrap" style="display:none;margin-bottom:.5rem;align-items:center;gap:.6rem">
+        <img id="wsLogoPreview" src="" alt="Preview" style="max-height:72px;max-width:160px;border-radius:6px;border:1px solid #e2e8f0;object-fit:contain;padding:4px;background:#fafafa" />
+        <button type="button" onclick="removerLogo()" style="font-size:.75rem;color:#e53e3e;background:none;border:none;cursor:pointer;padding:0">Remover</button>
+      </div>
+      <input type="file" id="wsLogoFile" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" onchange="onLogoSelected(this)" style="font-size:.82rem;color:#555" />
     </div>
     <div class="field">
       <label>Limite de mensagens / mês *</label>
@@ -587,6 +725,30 @@
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════
+     Modal Financeiro — detalhe da assinatura
+════════════════════════════════════════════════════════════ -->
+<div class="overlay" id="overlayFin" onclick="fecharModalFin(event)">
+  <div class="modal modal-wide" onclick="event.stopPropagation()">
+    <div class="modal-title" id="finModalTitle">Detalhes da assinatura</div>
+
+    <div id="finModalInfo" style="margin-bottom:1.25rem;padding:.85rem 1rem;background:#f7f9fb;border-radius:10px;font-size:.85rem;line-height:1.8"></div>
+
+    <div style="font-size:.78rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.6rem">Histórico de cobranças</div>
+    <div class="cobr-table-wrap">
+      <div id="finCobrancasWrap"><div class="empty-state">Carregando…</div></div>
+    </div>
+
+    <div class="form-error"   id="finModalError"></div>
+    <div class="form-success" id="finModalSuccess"></div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="fecharModalFin()">Fechar</button>
+      <button class="btn-danger" id="btnCancelarAssinatura" onclick="cancelarAssinatura()">Cancelar assinatura</button>
+    </div>
+  </div>
+</div>
+
 <script src="/auth.js"></script>
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -598,9 +760,16 @@ let editingWsId = null;     // null = creating
 let editingUser = null;     // user being edited
 let ctxSource = "manual";   // manual | pdf | url
 let pdfFile = null;
+let logoData = "";          // "" = sem logo | base64 data URL = imagem local | URL = imagem existente
 let activeTab = "workspaces";
 let cuponsCarregados = false;
 let solicitacoesCarregadas = false;
+let financeiroCarregado = false;
+let assinaturas = [];
+let assinaturasFiltradas = [];
+let finWsAtivo = null;
+let workspacesFiltrados = [];
+let usuariosFiltrados = [];
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 (async () => {
@@ -618,8 +787,10 @@ function switchTab(tab) {
   });
   document.querySelectorAll(".tab-content").forEach((c) => c.classList.remove("active"));
   document.getElementById(`tab-${tab}`).classList.add("active");
+  document.querySelector(".stats-row").style.display = tab === "workspaces" ? "" : "none";
   if (tab === "cupons"       && !cuponsCarregados)       carregarCupons();
   if (tab === "solicitacoes" && !solicitacoesCarregadas) carregarSolicitacoes();
+  if (tab === "financeiro"   && !financeiroCarregado)   carregarFinanceiro();
 }
 
 // ── Load data ─────────────────────────────────────────────────────────────────
@@ -629,7 +800,7 @@ async function carregarWorkspaces() {
   const d = await res.json();
   workspaces = d.workspaces ?? [];
   document.getElementById("statWs").textContent = workspaces.length;
-  renderWorkspaces();
+  filtrarWorkspaces();
 }
 
 async function carregarUsuarios() {
@@ -640,24 +811,53 @@ async function carregarUsuarios() {
   document.getElementById("statTotal").textContent = usuarios.length;
   document.getElementById("statVendedoras").textContent = usuarios.filter(u => u.role === "vendedora").length;
   document.getElementById("statGestores").textContent = usuarios.filter(u => u.role === "gestor").length;
+  filtrarUsuarios();
+}
+
+// ── Filtros ───────────────────────────────────────────────────────────────────
+function filtrarWorkspaces() {
+  const busca       = (document.getElementById("wsBusca")?.value ?? "").toLowerCase().trim();
+  const statusFiltro = document.getElementById("wsStatusFiltro")?.value ?? "";
+  workspacesFiltrados = workspaces.filter(ws => {
+    if (statusFiltro && ws.status !== statusFiltro) return false;
+    if (busca) {
+      const nome = (ws.nome ?? "").toLowerCase();
+      const cnpj = (ws.cnpj ?? "").toLowerCase();
+      if (!nome.includes(busca) && !cnpj.includes(busca)) return false;
+    }
+    return true;
+  });
+  renderWorkspaces();
+}
+
+function filtrarUsuarios() {
+  const busca      = (document.getElementById("userBusca")?.value ?? "").toLowerCase().trim();
+  const roleFiltro = document.getElementById("userRoleFiltro")?.value ?? "";
+  usuariosFiltrados = usuarios.filter(u => {
+    if (roleFiltro && u.role !== roleFiltro) return false;
+    if (busca && !(u.email ?? "").toLowerCase().includes(busca)) return false;
+    return true;
+  });
   renderUsuarios();
 }
 
 // ── Render: workspaces ────────────────────────────────────────────────────────
 function renderWorkspaces() {
   const grid = document.getElementById("wsGrid");
+  const total = workspaces.length;
+  const visiveis = workspacesFiltrados.length;
   document.getElementById("wsCount").textContent =
-    workspaces.length ? `${workspaces.length} workspace${workspaces.length > 1 ? "s" : ""}` : "";
+    total ? `${visiveis} de ${total} workspace${total > 1 ? "s" : ""}` : "";
 
-  if (!workspaces.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">Nenhum workspace cadastrado ainda.</div>`;
+  if (!visiveis) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">${total ? "Nenhum resultado para o filtro." : "Nenhum workspace cadastrado ainda."}</div>`;
     return;
   }
 
   const statusLabel = { trial: "Trial", active: "Ativo", demo: "Demo", suspended: "Suspenso" };
   const statusColor = { trial: "#f59e0b", active: "#128c7e", demo: "#6366f1", suspended: "#ef4444" };
 
-  grid.innerHTML = workspaces.map(ws => {
+  grid.innerHTML = workspacesFiltrados.map(ws => {
     const letra = ws.nome?.[0]?.toUpperCase() ?? "?";
     const avatar = ws.logo_url
       ? `<img src="${esc(ws.logo_url)}" alt="" onerror="this.parentElement.textContent='${letra}'">`
@@ -694,7 +894,7 @@ function renderWorkspaces() {
           </div>
           <div style="display:flex;gap:.4rem">
             ${!isDemo ? `<button class="btn-edit" style="font-size:.72rem;border-color:#6366f1;color:#6366f1" onclick="marcarComoDemo('${esc(ws.id)}')">Demo</button>` : ""}
-            <button class="btn-edit" onclick="abrirModalWs(${JSON.stringify(ws.id)})">Editar</button>
+            <button class="btn-edit" onclick="abrirModalWs('${esc(ws.id)}')">Editar</button>
           </div>
         </div>
       </div>`;
@@ -703,17 +903,19 @@ function renderWorkspaces() {
 
 // ── Render: users ─────────────────────────────────────────────────────────────
 function renderUsuarios() {
-  const wrap = document.getElementById("usersTableWrap");
+  const wrap     = document.getElementById("usersTableWrap");
+  const total    = usuarios.length;
+  const visiveis = usuariosFiltrados.length;
   document.getElementById("usersCount").textContent =
-    usuarios.length ? `${usuarios.length} usuário${usuarios.length > 1 ? "s" : ""}` : "";
+    total ? `${visiveis} de ${total} usuário${total > 1 ? "s" : ""}` : "";
 
-  if (!usuarios.length) {
-    wrap.innerHTML = `<div class="empty-state">Nenhum usuário encontrado.</div>`;
+  if (!visiveis) {
+    wrap.innerHTML = `<div class="empty-state">${total ? "Nenhum resultado para o filtro." : "Nenhum usuário encontrado."}</div>`;
     return;
   }
 
   const wsMap = Object.fromEntries(workspaces.map(w => [w.id, w.nome]));
-  const rows = usuarios.map(u => `
+  const rows = usuariosFiltrados.map(u => `
     <tr class="row-clickable" onclick="abrirModalEditUser('${esc(u.id)}')">
       <td>${esc(u.email ?? "—")}</td>
       <td><span class="role-badge role-${u.role}">${u.role === "gestor" ? "Gestor" : u.role === "cliente" ? "Cliente" : "Vendedora"}</span></td>
@@ -752,8 +954,12 @@ function abrirModalWs(wsId = null) {
     document.getElementById("wsResponsavel").value = ws.responsavel ?? "";
     document.getElementById("wsCidade").value = ws.cidade ?? "";
     document.getElementById("wsEstado").value = ws.estado ?? "";
-    document.getElementById("wsLogoUrl").value = ws.logo_url ?? "";
     document.getElementById("wsLimite").value = ws.limite_mensagens_mes ?? 100;
+    if (ws.logo_url) {
+      logoData = ws.logo_url;
+      document.getElementById("wsLogoPreview").src = ws.logo_url;
+      document.getElementById("wsLogoPreviewWrap").style.display = "flex";
+    }
     document.getElementById("wsContexto").value = ws.contexto_marca ?? "";
   }
 
@@ -766,13 +972,41 @@ function fecharModalWs(e) {
 }
 
 function resetFormWs() {
-  ["wsNome","wsSegmento","wsCnpj","wsEmailContato","wsTelefone","wsResponsavel","wsCidade","wsEstado","wsLogoUrl","wsContexto","wsUrl"].forEach(id => {
+  ["wsNome","wsSegmento","wsCnpj","wsEmailContato","wsTelefone","wsResponsavel","wsCidade","wsEstado","wsContexto","wsUrl"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = "";
   });
   document.getElementById("wsLimite").value = 100;
+  removerLogo();
   setError("wsError", null);
   setSuccess("wsSuccess", null);
+}
+
+function onLogoSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) {
+    alert("A imagem deve ter no máximo 2 MB.");
+    input.value = "";
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    logoData = e.target.result;
+    document.getElementById("wsLogoPreview").src = logoData;
+    document.getElementById("wsLogoPreviewWrap").style.display = "flex";
+  };
+  reader.readAsDataURL(file);
+}
+
+function removerLogo() {
+  logoData = "";
+  const fileInput = document.getElementById("wsLogoFile");
+  if (fileInput) fileInput.value = "";
+  const preview = document.getElementById("wsLogoPreview");
+  if (preview) preview.src = "";
+  const wrap = document.getElementById("wsLogoPreviewWrap");
+  if (wrap) wrap.style.display = "none";
 }
 
 function switchCtx(src) {
@@ -790,7 +1024,7 @@ async function salvarWs() {
   setSuccess("wsSuccess", null);
 
   const nome = v("wsNome"), segmento = v("wsSegmento");
-  const logo_url = v("wsLogoUrl"), limite = v("wsLimite");
+  const limite = v("wsLimite");
   const contexto_marca = v("wsContexto");
   const cnpj = v("wsCnpj"), email_contato = v("wsEmailContato");
   const telefone = v("wsTelefone"), responsavel = v("wsResponsavel");
@@ -807,7 +1041,7 @@ async function salvarWs() {
 
   const body = {
     nome, segmento, contexto_marca,
-    logo_url: logo_url || undefined,
+    logo_url: logoData || undefined,
     limite_mensagens_mes: Number(limite) || 100,
     cnpj: cnpj || null,
     email_contato: email_contato || null,
@@ -1046,6 +1280,12 @@ async function salvarEditUser() {
   setError("editUserError", null);
   setSuccess("editUserSuccess", null);
 
+  // Captura snapshot imutável antes de qualquer await
+  const userId         = editingUser.id;
+  const emailAtual     = editingUser.email;
+  const wsAtual        = editingUser.workspace_id ?? null;
+  const roleAtual      = editingUser.role;
+
   const email        = v("editUserEmail");
   const workspace_id = v("editUserWorkspace") || null;
   const role         = v("editUserRole");
@@ -1055,10 +1295,10 @@ async function salvarEditUser() {
   if (!email) { setError("editUserError", "Email é obrigatório."); return; }
 
   const body = {};
-  if (email        !== editingUser.email)                    body.email        = email;
-  if (workspace_id !== (editingUser.workspace_id ?? null))   body.workspace_id = workspace_id;
-  if (role         !== editingUser.role)                     body.role         = role;
-  if (password)                                              body.password     = password;
+  if (email        !== emailAtual)  body.email        = email;
+  if (workspace_id !== wsAtual)     body.workspace_id = workspace_id;
+  if (role         !== roleAtual)   body.role         = role;
+  if (password)                     body.password     = password;
 
   if (!Object.keys(body).length) {
     setError("editUserError", "Nenhuma alteração detectada.");
@@ -1070,7 +1310,7 @@ async function salvarEditUser() {
   btn.textContent = "Salvando…";
 
   try {
-    const res = await fetch(`/admin/usuarios/${editingUser.id}`, {
+    const res = await fetch(`/admin/usuarios/${userId}`, {
       method: "PATCH",
       headers: authHeaders(session),
       body: JSON.stringify(body),
@@ -1309,6 +1549,265 @@ async function confirmarRejeitar() {
     setError("rejeitarError", err.message);
   } finally {
     btn.disabled = false; btn.textContent = "Rejeitar";
+  }
+}
+
+// ── Financeiro ────────────────────────────────────────────────────────────────
+async function carregarFinanceiro() {
+  financeiroCarregado = true;
+  try {
+    const [resResumo, resAssins] = await Promise.all([
+      fetch("/admin/financeiro/resumo",      { headers: authHeaders(session) }),
+      fetch("/admin/financeiro/assinaturas", { headers: authHeaders(session) }),
+    ]);
+
+    if (resResumo.ok) {
+      const r = await resResumo.json();
+      document.getElementById("finAtivos").textContent    = r.ativos      ?? "—";
+      document.getElementById("finPagantes").textContent  = r.comAssinatura ?? "—";
+      document.getElementById("finSuspensos").textContent = r.suspensos    ?? "—";
+      document.getElementById("finMRR").textContent       = r.mrrEstimado != null
+        ? `R$ ${Number(r.mrrEstimado).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+        : "—";
+    }
+
+    if (resAssins.ok) {
+      const d = await resAssins.json();
+      assinaturas = d.assinaturas ?? [];
+      filtrarAssinaturas();
+    }
+  } catch (err) {
+    console.error("Erro ao carregar financeiro:", err);
+  }
+}
+
+function onFinPeriodoChange() {
+  const val = document.getElementById("finPeriodoSelect").value;
+  document.getElementById("finPeriodoCustom").classList.toggle("visible", val === "personalizado");
+  filtrarAssinaturas();
+}
+
+function filtrarAssinaturas() {
+  const periodo     = document.getElementById("finPeriodoSelect").value;
+  const statusFiltro = document.getElementById("finStatusFiltro").value;
+  const agora = new Date();
+  let inicio = null, fim = null;
+
+  if (periodo === "mes-atual") {
+    inicio = new Date(agora.getFullYear(), agora.getMonth(), 1);
+    fim    = new Date(agora.getFullYear(), agora.getMonth() + 1, 0, 23, 59, 59);
+  } else if (periodo === "3meses") {
+    inicio = new Date(agora); inicio.setMonth(inicio.getMonth() - 3);
+    fim    = agora;
+  } else if (periodo === "personalizado") {
+    const di = document.getElementById("finDataInicio").value;
+    const df = document.getElementById("finDataFim").value;
+    if (di) inicio = new Date(di);
+    if (df) { fim = new Date(df); fim.setHours(23, 59, 59); }
+  }
+
+  const busca = (document.getElementById("finBusca")?.value ?? "").toLowerCase().trim();
+
+  assinaturasFiltradas = assinaturas.filter(ws => {
+    if (statusFiltro && ws.status !== statusFiltro) return false;
+    if (busca) {
+      const nome = (ws.nome ?? "").toLowerCase();
+      const cnpj = (ws.cnpj ?? "").toLowerCase();
+      if (!nome.includes(busca) && !cnpj.includes(busca)) return false;
+    }
+    if (inicio || fim) {
+      const criado = new Date(ws.created_at);
+      if (inicio && criado < inicio) return false;
+      if (fim    && criado > fim)    return false;
+    }
+    return true;
+  });
+
+  renderAssinaturas();
+}
+
+const WS_STATUS_LABEL = { active: "Ativo", trial: "Trial", demo: "Demo", suspended: "Suspenso" };
+const WS_STATUS_CLASS = { active: "st-active", trial: "st-trial", demo: "st-demo", suspended: "st-suspended" };
+const ASAAS_STATUS_LABEL = { ACTIVE: "Ativa", INACTIVE: "Inativa", OVERDUE: "Inadimplente" };
+const ASAAS_STATUS_CLASS = { ACTIVE: "st-active", OVERDUE: "st-overdue", INACTIVE: "st-inactive" };
+
+function renderAssinaturas() {
+  const wrap = document.getElementById("finTableWrap");
+  if (!assinaturasFiltradas.length) {
+    wrap.innerHTML = `<div class="empty-state">Nenhum resultado para o filtro selecionado.</div>`;
+    return;
+  }
+
+  const rows = assinaturasFiltradas.map(ws => {
+    const wsCls   = WS_STATUS_CLASS[ws.status]  ?? "st-inactive";
+    const wsLbl   = WS_STATUS_LABEL[ws.status]  ?? ws.status;
+    const aSt     = ws.asaas?.status;
+    const aCls    = ASAAS_STATUS_CLASS[aSt]      ?? "st-inactive";
+    const aLbl    = ASAAS_STATUS_LABEL[aSt]      ?? (aSt ?? "—");
+    const hasSub  = !!ws.asaas_subscription_id;
+
+    return `<tr class="row-clickable" onclick="abrirModalFin('${esc(ws.id)}')">
+      <td><strong>${esc(ws.nome ?? "—")}</strong><div style="font-size:.75rem;color:#888">${esc(ws.cnpj ?? "—")}</div></td>
+      <td style="font-size:.82rem">${esc(ws.email_contato ?? "—")}</td>
+      <td><span class="status-badge ${wsCls}">${wsLbl}</span></td>
+      <td>${hasSub
+        ? `<span class="status-badge ${aCls}">${aLbl}</span>`
+        : `<span style="color:#aaa;font-size:.78rem">Sem assinatura</span>`}</td>
+      <td style="font-size:.75rem;color:#888;font-family:monospace">${hasSub ? esc(ws.asaas_subscription_id) : "—"}</td>
+      <td style="white-space:nowrap;font-size:.78rem;color:#888">${fmtDate(ws.created_at)}</td>
+    </tr>`;
+  }).join("");
+
+  wrap.innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Workspace / CNPJ</th><th>E-mail</th><th>Status local</th>
+        <th>Status Asaas</th><th>ID Assinatura</th><th>Criado em</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// ── Modal detalhe ─────────────────────────────────────────────────────────────
+async function abrirModalFin(wsId) {
+  finWsAtivo = assinaturas.find(w => w.id === wsId) ?? null;
+  if (!finWsAtivo) return;
+
+  setError("finModalError", null);
+  setSuccess("finModalSuccess", null);
+
+  const wsCls = WS_STATUS_CLASS[finWsAtivo.status] ?? "st-inactive";
+  const wsLbl = WS_STATUS_LABEL[finWsAtivo.status] ?? finWsAtivo.status;
+
+  document.getElementById("finModalTitle").textContent = finWsAtivo.nome ?? "Detalhes";
+  document.getElementById("finModalInfo").innerHTML = `
+    <strong>${esc(finWsAtivo.nome ?? "—")}</strong><br>
+    CNPJ: ${esc(finWsAtivo.cnpj ?? "—")} &nbsp;|&nbsp; E-mail: ${esc(finWsAtivo.email_contato ?? "—")}<br>
+    Status: <span class="status-badge ${wsCls}">${wsLbl}</span>
+    &nbsp;|&nbsp; Assinatura: <code style="font-size:.8rem;background:#eee;padding:.1rem .3rem;border-radius:4px">${esc(finWsAtivo.asaas_subscription_id ?? "—")}</code>`;
+
+  document.getElementById("btnCancelarAssinatura").disabled = !finWsAtivo.asaas_subscription_id;
+  document.getElementById("finCobrancasWrap").innerHTML = `<div class="empty-state">Carregando cobranças…</div>`;
+  document.getElementById("overlayFin").classList.add("open");
+
+  if (!finWsAtivo.asaas_subscription_id) {
+    document.getElementById("finCobrancasWrap").innerHTML =
+      `<div class="empty-state">Este workspace não possui assinatura no Asaas.</div>`;
+    return;
+  }
+
+  try {
+    const res = await fetch(
+      `/admin/financeiro/assinaturas/${encodeURIComponent(finWsAtivo.asaas_subscription_id)}/cobrancas`,
+      { headers: authHeaders(session) }
+    );
+    const d = await res.json();
+    if (!res.ok) throw new Error(flatError(d.error));
+    renderCobrancas(d.data ?? []);
+  } catch (err) {
+    document.getElementById("finCobrancasWrap").innerHTML =
+      `<div class="empty-state" style="color:#e53e3e">Erro: ${esc(err.message)}</div>`;
+  }
+}
+
+const COBR_STATUS_LABEL = {
+  PENDING: "Pendente", CONFIRMED: "Confirmado", RECEIVED: "Recebido",
+  OVERDUE: "Vencido",  REFUNDED: "Estornado",   CHARGEBACK: "Chargeback", DELETED: "Excluído",
+};
+const COBR_STATUS_CLASS = {
+  CONFIRMED: "st-active", RECEIVED: "st-active",
+  PENDING:   "st-trial",  OVERDUE:  "st-overdue",
+  REFUNDED:  "st-inactive", CHARGEBACK: "st-inactive", DELETED: "st-inactive",
+};
+
+function renderCobrancas(cobrs) {
+  if (!cobrs.length) {
+    document.getElementById("finCobrancasWrap").innerHTML = `<div class="empty-state">Nenhuma cobrança encontrada.</div>`;
+    return;
+  }
+
+  const rows = cobrs.map(c => {
+    const st    = c.status ?? "";
+    const stLbl = COBR_STATUS_LABEL[st] ?? st;
+    const stCls = COBR_STATUS_CLASS[st]  ?? "st-inactive";
+    const valor = c.value != null
+      ? `R$ ${Number(c.value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+      : "—";
+    const podeSegVia = st === "OVERDUE" || st === "PENDING";
+
+    return `<tr>
+      <td style="font-size:.82rem;white-space:nowrap">${esc(c.dueDate ?? "—")}</td>
+      <td style="font-size:.82rem">${valor}</td>
+      <td><span class="cobr-status ${stCls}">${stLbl}</span></td>
+      <td style="white-space:nowrap">${podeSegVia
+        ? `<button class="btn-info" onclick="gerarSegundaVia('${esc(c.id)}', this)">2ª via PIX</button>`
+        : ""}</td>
+    </tr>`;
+  }).join("");
+
+  document.getElementById("finCobrancasWrap").innerHTML = `
+    <table>
+      <thead><tr><th>Vencimento</th><th>Valor</th><th>Status</th><th>Ação</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function fecharModalFin(e) {
+  if (e && e.target !== document.getElementById("overlayFin")) return;
+  document.getElementById("overlayFin").classList.remove("open");
+  finWsAtivo = null;
+}
+
+async function cancelarAssinatura() {
+  if (!finWsAtivo?.asaas_subscription_id) return;
+  if (!confirm(`Cancelar a assinatura de "${finWsAtivo.nome}"? Esta ação não pode ser desfeita.`)) return;
+
+  const btn = document.getElementById("btnCancelarAssinatura");
+  btn.disabled = true; btn.textContent = "Cancelando…";
+
+  try {
+    const res = await fetch(
+      `/admin/financeiro/assinaturas/${encodeURIComponent(finWsAtivo.asaas_subscription_id)}/cancelar`,
+      { method: "POST", headers: authHeaders(session) }
+    );
+    const d = await res.json();
+    if (!res.ok) throw new Error(flatError(d.error));
+
+    setSuccess("finModalSuccess", "Assinatura cancelada com sucesso.");
+    const idx = assinaturas.findIndex(w => w.id === finWsAtivo.id);
+    if (idx >= 0) { assinaturas[idx].status = "suspended"; assinaturas[idx].asaas = null; }
+    filtrarAssinaturas();
+    setTimeout(() => document.getElementById("overlayFin").classList.remove("open"), 1200);
+  } catch (err) {
+    setError("finModalError", err.message);
+    btn.disabled = false; btn.textContent = "Cancelar assinatura";
+  }
+}
+
+async function gerarSegundaVia(paymentId, btn) {
+  btn.disabled = true; btn.textContent = "Gerando…";
+  setError("finModalError", null);
+  setSuccess("finModalSuccess", null);
+
+  try {
+    const res = await fetch(
+      `/admin/financeiro/cobrancas/${encodeURIComponent(paymentId)}/segunda-via`,
+      { method: "POST", headers: authHeaders(session) }
+    );
+    const d = await res.json();
+    if (!res.ok) throw new Error(flatError(d.error));
+
+    const pixCopiaECola = d.payload ?? d.encodedImage ?? null;
+    if (pixCopiaECola) {
+      await navigator.clipboard.writeText(pixCopiaECola).catch(() => {});
+      setSuccess("finModalSuccess", "Código PIX copiado para a área de transferência!");
+    } else {
+      setSuccess("finModalSuccess", "Segunda via gerada com sucesso.");
+    }
+  } catch (err) {
+    setError("finModalError", "Erro ao gerar segunda via: " + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = "2ª via PIX";
   }
 }
 
